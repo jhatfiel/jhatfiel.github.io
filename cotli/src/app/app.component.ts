@@ -13,11 +13,11 @@ import {Observable} from 'rxjs/Rx';
     <td>
     <table border="1">
       <tr *ngFor="let hero of seat.heroes">
-        <td>{{hero.name}}</td>
+        <td><br>{{hero.name}}<br></td>
         <td *ngFor="let loot of hero.lootSlot">{{loot?.name}}<br>
-          {{loot?.golden}}:{{loot?.rarity}}<br>
+          <!--{{loot?.golden}}:{{loot?.rarity}}<br>-->
           Primary Effect: <span title="{{(loot.effects[0]||{}).effect_string}}">{{generateEffectString(loot.effects, 0)}}</span><br>
-          Legendary Effect: <span title="{{(loot.effects[1]||{}).effect_string}}">{{generateEffectString(loot.effects, 1)}}</span>
+          Legendary Effect: <span title="{{(loot.effects[1]||{}).effect_string}}">{{generateEffectString(loot.effects, 1)}}</span><br>
         </td>
       </tr>
     </table>
