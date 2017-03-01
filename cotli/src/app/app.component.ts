@@ -31,6 +31,7 @@ export class AppComponent implements OnInit {
   hero_defines: any[];
   loot_defines: any[];
   effect_defines: any[] = [];
+  ability_defines: any[] = [];
   formation_ability_defines: any[] = [];
   seats: any[] = [];
 
@@ -51,6 +52,9 @@ export class AppComponent implements OnInit {
           }
           for (var e of cotliDefines.effect_defines) {
             this.effect_defines[e.effect_key] = e;
+          }
+          for (var a of cotliDefines.ability_defines) {
+            this.ability_defines[a.id] = a;
           }
           this.assignSeats();
           this.assignLootSlots();
@@ -87,40 +91,176 @@ export class AppComponent implements OnInit {
     }
   }
 
-  generateEffectString(arr: any, ind: number) {
+  replaceDesc(desc: string, param: any): string {
+    //console.log('replaceDesc(' + desc + ')');
+    //console.log(param);
+    var cnt=0;
+    var nextVarStart = desc.indexOf('$');
+
+    while (nextVarStart >= 0 && cnt < 100) {
+      var pName: string;
+      var val: string;
+      var nextVarEnd = -1;
+      if (desc[nextVarStart+1] == '(') {
+        nextVarEnd = desc.indexOf(')', nextVarStart);
+        pName = desc.substring(nextVarStart, nextVarEnd+1);
+        //console.log('--- Need to call function #' + pName + '#');
+        val = this.evaluate(pName, param);
+      } else {
+        pName = desc.substr(nextVarStart).match(/^\$[a-z]+/)[0];
+        //console.log('--- Need to lookup #' + pName + '#');
+        val = this.lookup(pName, param);
+      }
+      //console.log('REPLACING #' + pName + '# with #' + val + '#');
+      desc = desc.replace(pName, val);
+      cnt++;
+      nextVarStart = desc.indexOf('$');
+    }
+
+    if (cnt >= 100) {
+      //console.log('Went over 100');
+      undefined.die;
+    } 
+
+    return desc;
+  }
+
+  lookup(pName: string, param: any): string {
+    var result = param[pName];
+
+    if (result == undefined) {
+      if (pName == '$target') {
+        var targets = param['$targets'];
+        if (targets != undefined) {
+          if (targets[0].type == 'by_tags') {
+            result = "";
+            for (var i=0; i<targets[0].tags.length; i++) {
+              var tag = this.describeTag(targets[0].tags[i]);
+              if (i > 0) {
+                result += ' and';
+              }
+              result += tag;
+            }
+            result = result + ' Crusaders';
+          } else {
+            result = 'UNKNOWN TARGET TYPE #' + targets[0].type + '#';
+          }
+        } else {
+          result = 'CRUSADER';
+        }
+      } else {
+        result = 'UNKNOWN PARAMETER #' + pName.replace(/\$/, '@') + '#';
+      }
+    }
+
+    return result;
+  }
+
+  evaluate(p: string, param: any): string {
+    p = p.substring(2, p.length-1);
+    //console.log('real function: ' + p);
+    var pArr = p.split(' ');
+    var f = pArr[0];
+    var result = p;
+    switch(f) {
+      case 'amount':
+        if (param['$amount']) {
+          result = param['$amount'];
+          break;
+        }
+      case 'level_amount':
+        if (param['$growth'] == 'exp') {
+          result = '(' + param['$factor'] + '^LEVEL * ' + param['$base_amount'] + ')';
+        } else {
+          result = 'GROWTH:' + param['$growth'] + ';FACTOR:' + param['$factor'] + ';BASE_AMOUNT:' + param['$base_amount'];
+        }
+        break;
+      case 'ability_name':
+        var aDef = this.ability_defines[param['$' + pArr[1]]];
+        result = aDef.name;
+        break;
+      case 'formation_ability_owner_name':
+        var faDef = this.formation_ability_defines[param['$' + pArr[1]]];
+        result = this.hero_defines[faDef.hero_id-1].name;
+        break;
+      case 'formation_ability_name':
+        result = this.formation_ability_defines[param['$' + pArr[1]]].name;
+        break;
+      case 'formation_ability_effect':
+        faDef = this.formation_ability_defines[param['$' + pArr[1]]];
+        for (var p in faDef.effect[0]) {
+          param['$' + p] = faDef.effect[0][p];
+        }
+        result = this.generateEffectString(faDef.effect, 0, param).replace(/#####.*/, '');
+        break;
+      case 'describe_tags':
+        result = this.describeTag(param['$' + pArr[1]]);
+        break;
+      default:
+        result = 'UNHANDLED EVALUATE: [' + f + ']';
+    }
+    return result;
+  }
+
+  describeTag(tag: string): string {
+    return tag[0].toUpperCase() + tag.substring(1);
+  }
+
+  handleParamNames(parameters: any, names: string) {
+    if (names.length == 0) {
+      parameters['$amount'] = parameters.arg0;
+    } else {
+      var nArr = names.split(',');
+      for (var i=0; i<nArr.length; i++) {
+        var nameType = nArr[i];
+        var typeArr = nameType.split(' ');
+        var val: string;
+        if (typeArr.length > 1) {
+          var type = typeArr[0];
+          nameType = typeArr[1];
+          switch (type) {
+            case 'int':
+            case 'str':
+              // nothing special here
+              val = parameters['arg' + i];
+              break;
+            default:
+              val = 'UNHANDLED TYPE: [' + type + ']';
+          }
+        } else {
+          val = parameters['arg' + i];
+        }
+        parameters['$' + nameType] = val;
+      }
+    }
+  }
+
+  generateEffectString(arr: any, ind: number, parameters: any) {
     var lootEffectDef = arr[ind]||{};
     var es = lootEffectDef.effect_string||'';
-    //console.log('effectString: ' + es);
     var parts = es.split(',');
     var effect = parts[0];
-    //console.log('effect = ' + effect);
     if (effect) {
       var effectDef = this.effect_defines[effect];
       if (effectDef) {
-        if (effectDef.owner == '') {
-          if (effect === 'unlock_formation_ability') {
-            var formationAbilityDef = this.formation_ability_defines[parts[1]];
-            var desc = formationAbilityDef.effect_description;
-            if (desc == 'desc') {
-              var mergedLootAbility = JSON.parse(JSON.stringify(lootEffectDef));
-              mergedLootAbility.effect_string = formationAbilityDef.effect[0].effect_string;
-              es = '@' + this.generateEffectString([mergedLootAbility], 0);
-            } else {
-              desc = desc.replace('$amount', '$(level_amount)');
-              es = this.replaceDescription({desc: desc}, parts, formationAbilityDef, lootEffectDef, undefined)
-            }
-          } else {
-            es = 'Unhandled non-owner Effect: ' + es;
-          }
-        } else if (effectDef.owner == 'global') {
-          var amtValue = parts[1];
-          es = this.replaceDescription(effectDef.descriptions, parts, effectDef, lootEffectDef, undefined)
-        } else if (effectDef.owner == 'formation_ability') {
-          var formationAbilityDef = this.formation_ability_defines[parts[2]];
-          es = this.replaceDescription(effectDef.descriptions, parts, effectDef, lootEffectDef, formationAbilityDef)
-        } else {
-          es = 'Unhandled Effect: ' + es;
+        //console.log('effectString: ' + es);
+        //console.log(effectDef);
+        if (parameters === undefined) {
+          parameters = {};
         }
+        for (var p in lootEffectDef) {
+          parameters['$' + p] = lootEffectDef[p];
+        }
+        for (var i=1; i<parts.length; i++) {
+          parameters['arg'+(i-1)] = parts[i];
+        }
+        this.handleParamNames(parameters, effectDef.param_names);
+
+        var desc = effectDef.descriptions.desc || effectDef.descriptions.all;
+
+        desc = this.replaceDesc(desc, parameters);
+
+        es = desc; // + '#####' + '(' + effect + ') ' + ' ' + JSON.stringify(parameters);
       } else {
         es = 'Unknown Effect: ' + es;
       }
@@ -128,29 +268,5 @@ export class AppComponent implements OnInit {
         es = 'UNDEFINED';
     }
     return es;
-  }
-
-  replaceDescription(descriptions: any, parts: string[], effectDef: any, lootEffectDef: any, formationAbilityDef?: any) {
-    var desc = descriptions.desc || descriptions.all || '';
-    var result = desc.replace('$amount', parts[1]);
-    var levelAmount = 'UnknownLevelAmount';
-    if (lootEffectDef.growth == 'exp') {
-      levelAmount = '(' + lootEffectDef.factor + '^LEVEL * ' + lootEffectDef.base_amount + ')';
-    } else {
-      levelAmount += 'GROWTH:' + lootEffectDef.growth + ';FACTOR:' + lootEffectDef.factor + ';BASE_AMOUNT:' + lootEffectDef.base_amount;
-    }
-
-    result = result.replace('$(level_amount)', levelAmount);
-
-    result = result.replace('$target', 'CRUSADER');
-
-    result = result.replace('$(describe_tags tag)', parts[2]);
-
-    if (formationAbilityDef !== undefined) {
-      result = result.replace('$(formation_ability_owner_name id)', this.hero_defines[formationAbilityDef.hero_id-1].name);
-      result = result.replace('$(formation_ability_name id)', formationAbilityDef.name);
-    }
-
-    return result;
   }
 }
