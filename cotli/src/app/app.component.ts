@@ -118,8 +118,7 @@ export class AppComponent implements OnInit {
     }
 
     if (cnt >= 100) {
-      //console.log('Went over 100');
-      undefined.die;
+      console.log('Went over 100' + 0/0);
     } 
 
     return desc;
