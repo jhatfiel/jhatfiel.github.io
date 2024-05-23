@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Test animation</title>
+	<style>
+		* {
+			box-sizing: border-box;
+		}
+		
+		html {
+			height: 100%;
+		}
+		
+		body {
+			margin: 0 8px;
+			height: 100vh;
+		}
+		
+		.container {
+			display: flex;
+			height: 100%;
+		}
+		
+		.child {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+		}
+		
+		.block {
+			width: 30px;
+			height: 200px;
+			background: black;
+		}
+
+		@keyframes fillup {
+			0% {height: 0;}
+			100% {height: 100%;}
+		}
+		
+		.box {
+			width: 100%;
+			height: 0px;
+			top: 0px;
+			background: green;
+			animation: fillup 5s linear infinite normal forwards;
+		}
+		
+		.debug {
+			font-size: small;
+			overflow-x: hidden;
+			overflow-y: auto;
+			height: 100%;
+		}
+	</style>
+	<script>
+		function getBoxDiv(num) { return document.getElementById(`box${num}`); }
+		
+		function message(num, str) {
+			document.getElementById(`debug${num}`).innerHTML += `<br>${str}`;
+		}
+		
+		function logStats(num) {
+			message(num, `-----`);
+			message(num, `height: ${window.getComputedStyle(getBoxDiv(num)).height}`);
+		}
+
+		function logHeightAfterTimeout(num) {
+			setTimeout(() => message(num, `After timeout, height: ${window.getComputedStyle(getBoxDiv(num)).height}`, 0));
+		}
+		
+		function toggleAnimation(num, forceRunning=undefined) {
+			let el = getBoxDiv(num);
+
+			message(num, `Before toggle, height: ${window.getComputedStyle(el).height}`);
+			let state = el.style.animationPlayState;
+			
+			// handle toggle
+			if (state === 'paused') state = '';
+			else if (state === '') state = 'paused';
+			
+			// check for force
+			if (forceRunning === true) state = '';
+			else if (forceRunning === false) state = 'paused';
+			
+			el.style.animationPlayState = state;
+			
+			message(num, `After toggle, height: ${window.getComputedStyle(el).height}`);
+		}
+		
+		function playPause(num) {
+			message(num, `-----`);
+			toggleAnimation(num);
+		}
+		
+		function pauseAfterConfirm(num) {
+			message(num, `-----`);
+			let el = getBoxDiv(num);
+			message(num, `Before confirm, height: ${window.getComputedStyle(el).height}`);
+			if (confirm('Toggle animation state?')) {
+				toggleAnimation(num);
+				logHeightAfterTimeout(num);
+			} else {
+				message(num, `After confirm, height: ${window.getComputedStyle(el).height}`);
+				logHeightAfterTimeout(num);
+			}
+		}
+		
+		function pauseThenConfirmForContinue(num, delay=0) {
+			message(num, `-----`);
+			let el = getBoxDiv(num);
+			toggleAnimation(num, false);
+			setTimeout(() => {
+				message(num, `Before confirm, height: ${window.getComputedStyle(el).height}`);
+				if (confirm('Restart animation?')) {
+					toggleAnimation(num);
+					el.style.animationName = undefined;
+					setTimeout(() => el.style.animationName = 'fillup', 0);
+				} else {
+					// do nothing, we are happy with everything being stopped
+					logHeightAfterTimeout(num);
+				}
+			}, delay);
+		}
+		
+		function pauseThenConfirmForContinueObject(num) {
+			message(num, `-----`);
+			let el = getBoxDiv(num);
+			message(num, `Before pause, height: ${window.getComputedStyle(el).height}`);
+			let [anim] = el.getAnimations().filter(a => a.animationName === 'fillup');
+			anim.pause()
+			message(num, `Before ready, height: ${window.getComputedStyle(el).height}`);
+			anim.ready.then(() => {
+				message(num, `Before confirm, height: ${window.getComputedStyle(el).height}`);
+				if (confirm('Restart animation?')) {
+					message(num, `After confirm, height: ${window.getComputedStyle(el).height}`);
+					anim.currentTime = 0;
+					message(num, `After time=0, height: ${window.getComputedStyle(el).height}`);
+					anim.play();
+					message(num, `After play, height: ${window.getComputedStyle(el).height}`);
+					anim.ready.then(() => {
+						message(num, `After ready, height: ${window.getComputedStyle(el).height}`);
+					});
+				} else {
+					// do nothing, we are happy with everything being stopped
+					logHeightAfterTimeout(num);
+				}
+			});
+		}
+	</script>
+</head>
+<body>
+	<div class="container">
+		<div class="child">
+			<div>
+				<p>Normal, direct access</p>
+				<button onclick="logStats(1)">Log box stats</button><br>
+				<button onclick="playPause(1)">Play/Pause</button><br>
+			</div>
+			<div id="block1" class="block"><div id="box1" class="box"></div></div>
+			<div id="debug1" class="debug">Debug</div>
+		</div>
+		<div class="child">
+			<div>
+				<p>Confirm first</p>
+				<button onclick="logStats(2)">Log box stats</button><br>
+				<button onclick="pauseAfterConfirm(2)">Play/Pause</button><br>
+			</div>
+			<div id="block2" class="block"><div id="box2" class="box"></div></div>
+			<div id="debug2" class="debug">Debug</div>
+		</div>
+		<div class="child">
+			<div>
+				<p>Pause, then confirm</p>
+				<button onclick="logStats(3)">Log box stats</button><br>
+				<button onclick="pauseThenConfirmForContinue(3)">Pause, then confirm</button><br>
+			</div>
+			<div id="block3" class="block"><div id="box3" class="box"></div></div>
+			<div id="debug3" class="debug">Debug</div>
+		</div>
+		<div class="child">
+			<div>
+				<p>Pause, then confirm after 50s</p>
+				<button onclick="logStats(4)">Log box stats</button><br>
+				<button onclick="pauseThenConfirmForContinue(4, 100)">Pause, then confirm</button><br>
+			</div>
+			<div id="block4" class="block"><div id="box4" class="box"></div></div>
+			<div id="debug4" class="debug">Debug</div>
+		</div>
+		<div class="child">
+			<div>
+				<p>Pause using object</p>
+				<button onclick="logStats(5)">Log box stats</button><br>
+				<button onclick="pauseThenConfirmForContinueObject(5)">Pause, then confirm</button><br>
+			</div>
+			<div id="block5" class="block"><div id="box5" class="box"></div></div>
+			<div id="debug5" class="debug">Debug</div>
+		</div>
+	</div>
+</body>
+</html>
