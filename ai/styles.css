@@ -123,11 +123,6 @@ body {
 
 .popup-content a {
   color: blue;
-  text-decoration: none;
-}
-
-.popup-content a:hover {
-  text-decoration: underline;
 }
 
 /* Show the popup when it has the 'open' class */
