@@ -86,3 +86,51 @@ body {
   background: linear-gradient(transparent, white);
   pointer-events: none;
 }
+
+.popup-trigger {
+  position: relative;
+  cursor: pointer;
+  color: blue;
+  text-decoration: underline;
+}
+
+.popup-content {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 100%;
+  background-color: white;
+  border: 1px solid #ccc;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  padding: 10px;
+  width: 200px;
+  z-index: 1000;
+}
+
+.popup-content ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.popup-content li {
+  margin-bottom: 10px;
+}
+
+.popup-content li:last-child {
+  margin-bottom: 0;
+}
+
+.popup-content a {
+  color: blue;
+  text-decoration: none;
+}
+
+.popup-content a:hover {
+  text-decoration: underline;
+}
+
+/* Show the popup when it has the 'open' class */
+.popup-trigger.open .popup-content {
+  display: block;
+}
