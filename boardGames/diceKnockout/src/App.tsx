@@ -195,8 +195,9 @@ const App = () => {
   }
 
   const handleCalculate = () => {
-    setIsCalculating(true);
     initializeTable();
+    setCreated(-1);
+    setIsCalculating(true);
     setTimeout(_handleCalculate);
   }
 
@@ -211,13 +212,14 @@ const App = () => {
       const maxSquare = operations.square?operations.unlimitedSquare?4:1:0;
       const maxSqrt = operations.sqrt?operations.unlimitedRoot?4:1:0;
       const numbers = numbersInput.split(',').map(Number).filter(n=>!isNaN(n)).sort().map(n=>new LiteralNode(n));
+      // keep track of the best way to make any number.
+      // If we ever come across a number that we already know how to make using the same digits, only keep this one if it is fewer operations
+      // key is comma-separated digits that are being used (ascending order)
+      // object is the expression that makes this 
+      let cache: Map<string, ExpressionNode>[] = [];
+      let processed = new Set<string>();
+
       let buildExpressions = (arr: ExpressionNode[]): ExpressionNode[] => {
-        // keep track of the best way to make any number.
-        // If we ever come across a number that we already know how to make using the same digits, only keep this one if it is fewer operations
-        // key is comma-separated digits that are being used (ascending order)
-        // object is the expression that makes this 
-        let cache: Map<string, ExpressionNode>[] = [];
-        let processed = new Set<string>();
         let result: ExpressionNode[] = [];
         let maybeAdd = (expr: ExpressionNode) => {
           let val = expr.compute();
@@ -303,7 +305,7 @@ const App = () => {
                 if (!processed.has(key)) {
                   processed.add(key);
                   for (let subExpr of buildExpressions([expr, ...set.rest])) {
-                    maybeAdd(subExpr);
+                    result.push(subExpr);
                   }
                 }
               };
@@ -403,7 +405,7 @@ const App = () => {
             <button onClick={handleCalculate} disabled={isCalculating} type="button" className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 inline-flex items-center">
               Calculate
             </button>
-            &nbsp; <span onClick={viewResults}>Successfully Created: {created}</span>
+            &nbsp; <span onClick={viewResults}>Successfully Created: {created>=0?created:'Calculating...'}</span>
           </div>
       </div>
       {isVisible && (
