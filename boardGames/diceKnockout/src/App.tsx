@@ -169,112 +169,119 @@ const App = () => {
   };
 
   const handleCalculate = () => {
-    console.log(`Processing ${numbersInput}`);
-    const maxSquare = operations.square?operations.unlimitedSquare?5:1:0;
-    const maxSqrt = operations.sqrt?operations.unlimitedRoot?5:1:0;
-    const numbers = numbersInput.split(',').map(Number).filter(n=>!isNaN(n)).sort().map(n=>new LiteralNode(n));
-    console.log({maxSquare, maxSqrt});
-
-    let processed = new Set<string>();
-    let buildExpressions = (arr: ExpressionNode[]): ExpressionNode[] => {
-      let result: ExpressionNode[] = [];
-      let addUnaries = (a: ExpressionNode, b: ExpressionNode, op: BinaryOperation) => {
-        let ae = a;
-        for (let i=0; i<=maxSquare; i++) {
-          let be = b;
-          for (let j=0; j<=maxSquare; j++) {
-            result.push(new BinaryNode(ae, op, be));
-            be = new UnaryNode(be, '^');
-          }
-          be = b;
-          for (let j=0; j<=maxSqrt; j++) {
-            result.push(new BinaryNode(ae, op, be));
-            be = new UnaryNode(be, '_');
-          }
-          ae = new UnaryNode(ae, '^');
-        }
-
-        ae = a;
-        for (let i=0; i<=maxSqrt; i++) {
-          let be = b;
-          for (let j=0; j<=maxSquare; j++) {
-            result.push(new BinaryNode(ae, op, be));
-            be = new UnaryNode(be, '^');
-          }
-          be = b;
-          for (let j=0; j<=maxSqrt; j++) {
-            result.push(new BinaryNode(ae, op, be));
-            be = new UnaryNode(be, '_');
-          }
-          ae = new UnaryNode(ae, '_');
-        }
-      }
-
-      if (arr.length === 2) {
-        let [a,b] = arr;
-        let [av, bv] = [a.compute(), b.compute()];
-
-        if (operations.add) {
-          addUnaries(a, b, '+');
-        }
-
-        if (operations.subtract) {
-          addUnaries(b, a, '-');
-          if (av !== bv) {
-            addUnaries(a, b, '-');
-          }
-        }
-
-        if (operations.multiply) {
-          addUnaries(a, b, '*');
-        }
-
-        if (operations.divide) {
-          addUnaries(b, a, '/');
-          if (av !== bv) {
-            addUnaries(a, b, '/');
-          }
-        }
-      } else {
-        choose2(arr).forEach(set => {
-          let key = `${set.a.toString()}&${set.b.toString()}[${set.rest.map(e=>e.toString()).join(',')}]`;
-          if (!processed.has(key)) {
-            for (let expr of buildExpressions([set.a, set.b])) {
-              result.push(...buildExpressions([expr, ...set.rest]));
-            };
-            processed.add(key);
-          }
-        });
-      }
-      return result;
-    };
-
     const newTable = tableData.map(row => ({
       ...row,
       equation: '',
       operations: 0
     }));
+    setTableData(newTable);
 
-    let count = 0;
-    let expressions = buildExpressions(numbers);
-    console.log(`Evaluating ${expressions.length} expressions`);
-    for (let expr of expressions) {
-      let value = expr.compute();
-      if (value > 0 && value <= maximum) {
-        let row = newTable.filter(td => td.target === value)[0];
-        //console.log(`Found ${value} from ${expr.toString()}, row=${row.equation}`);
-        if (row.equation === '' || expr.operations() < row.operations) {
-          if (row.equation === '') count++;
-          row.equation = expr.toHTML();
-          row.operations = expr.operations();
-          console.log(`${expr.toString()} = ${value}`);
+    try {
+      console.log(`Processing ${numbersInput}`);
+      const maxSquare = operations.square?operations.unlimitedSquare?4:1:0;
+      const maxSqrt = operations.sqrt?operations.unlimitedRoot?4:1:0;
+      const numbers = numbersInput.split(',').map(Number).filter(n=>!isNaN(n)).sort().map(n=>new LiteralNode(n));
+      console.log({maxSquare, maxSqrt});
+
+      let processed = new Set<string>();
+      let buildExpressions = (arr: ExpressionNode[]): ExpressionNode[] => {
+        let result: ExpressionNode[] = [];
+        let addUnaries = (a: ExpressionNode, b: ExpressionNode, op: BinaryOperation) => {
+          let ae = a;
+          for (let i=0; i<=maxSquare; i++) {
+            let be = b;
+            for (let j=0; j<=maxSquare; j++) {
+              result.push(new BinaryNode(ae, op, be));
+              be = new UnaryNode(be, '^');
+            }
+            be = b;
+            for (let j=0; j<=maxSqrt; j++) {
+              result.push(new BinaryNode(ae, op, be));
+              be = new UnaryNode(be, '_');
+            }
+            ae = new UnaryNode(ae, '^');
+          }
+
+          ae = a;
+          for (let i=0; i<=maxSqrt; i++) {
+            let be = b;
+            for (let j=0; j<=maxSquare; j++) {
+              result.push(new BinaryNode(ae, op, be));
+              be = new UnaryNode(be, '^');
+            }
+            be = b;
+            for (let j=0; j<=maxSqrt; j++) {
+              result.push(new BinaryNode(ae, op, be));
+              be = new UnaryNode(be, '_');
+            }
+            ae = new UnaryNode(ae, '_');
+          }
+        }
+
+        if (arr.length === 2) {
+          let [a,b] = arr;
+          let [av, bv] = [a.compute(), b.compute()];
+
+          if (operations.add) {
+            addUnaries(a, b, '+');
+          }
+
+          if (operations.subtract) {
+            addUnaries(b, a, '-');
+            if (av !== bv) {
+              addUnaries(a, b, '-');
+            }
+          }
+
+          if (operations.multiply) {
+            addUnaries(a, b, '*');
+          }
+
+          if (operations.divide) {
+            addUnaries(b, a, '/');
+            if (av !== bv) {
+              addUnaries(a, b, '/');
+            }
+          }
+        } else {
+          choose2(arr).forEach(set => {
+            let key = `${set.a.toString()}&${set.b.toString()}[${set.rest.map(e=>e.toString()).join(',')}]`;
+            if (!processed.has(key)) {
+              for (let expr of buildExpressions([set.a, set.b])) {
+                result.push(...buildExpressions([expr, ...set.rest]));
+              };
+              processed.add(key);
+            }
+          });
+        }
+        return result;
+      };
+
+      let count = 0;
+      let expressions = buildExpressions(numbers);
+      console.log(`Evaluating ${expressions.length} expressions`);
+      for (let expr of expressions) {
+        let value = expr.compute();
+        if (value > 0 && value <= maximum) {
+          let row = newTable.filter(td => td.target === value)[0];
+          //console.log(`Found ${value} from ${expr.toString()}, row=${row.equation}`);
+          if (row.equation === '' || expr.operations() < row.operations) {
+            if (row.equation === '') count++;
+            row.equation = expr.toHTML();
+            row.operations = expr.operations();
+            console.log(`${expr.toString()} = ${value}`);
+          }
         }
       }
+
+      setTableData(newTable);
+      setCreated(count);
+      console.log('complete');
+    } catch (e) {
+      console.error(e);
+      alert('Too complicated, try reducing the number of checked options or the number of dice');
     }
 
-    setTableData(newTable);
-    setCreated(count);
-    console.log('complete');
   };
 
   return (
