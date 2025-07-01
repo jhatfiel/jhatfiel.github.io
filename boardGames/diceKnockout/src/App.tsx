@@ -150,6 +150,7 @@ const App = () => {
   const [maximum, setMaximum] = useState(19);
   const [tableData, setTableData] = useState<{target: number; equation: string, operations: number}[]>([]);
   const [created, setCreated] = useState(0);
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     // Regenerate table rows when maximum changes
@@ -167,6 +168,10 @@ const App = () => {
       [key]: !prev[key],
     }));
   };
+
+  const viewResults = () => {
+    setIsVisible(true);
+  }
 
   const handleCalculate = () => {
     const newTable = tableData.map(row => ({
@@ -276,6 +281,7 @@ const App = () => {
 
       setTableData(newTable);
       setCreated(count);
+      setIsVisible(false);
       console.log('complete');
     } catch (e) {
       console.error(e);
@@ -292,6 +298,8 @@ const App = () => {
         <p className="text-sm">In Dice Knockout, the objective is to use the digits on some number of rolled dice to generate your target numbers (say, from 1-19).</p>
         <br/>
         <p className="text-sm">Enter your rolled dice and the rules then press&nbsp;<span className="font-mono, bg-black"> Calculate </span>&nbsp;to see what target numbers can be created.</p>
+        <br/>
+        <p className="text-sm">Tap the&nbsp;<span className="font-mono, bg-black"> Successfully Created </span>&nbsp;line to view the Equations that create each target number.</p>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 mb-4">
@@ -343,8 +351,9 @@ const App = () => {
       <button onClick={handleCalculate} className="mb-4 bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600">
         Calculate
       </button>
-      Successfully Created: {created}
+      <span onClick={viewResults}>Successfully Created: {created}</span>
 
+      {isVisible && (
       <table className="w-full border-collapse">
         <thead>
           <tr>
@@ -361,6 +370,7 @@ const App = () => {
           ))}
         </tbody>
       </table>
+      )}
     </div>
   );
 };
