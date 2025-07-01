@@ -20,6 +20,10 @@ type UnaryOperation = '^'|'_';
 type BinaryOperation = '+'|'-'|'*'|'/';
 
 abstract class ExpressionNode {
+  getUsedDigitKey(): string {
+    return this.getUsedDigits().sort().join(',');
+  }
+  abstract getUsedDigits(): number[];
   abstract toHTML(): string;
   abstract toString(): string;
   abstract compute(): number;
@@ -30,6 +34,10 @@ class LiteralNode extends ExpressionNode {
   constructor(public value: number) {
     super();
   };
+
+  getUsedDigits(): number[] {
+    return [this.value];
+  }
 
   toHTML(): string {
     return this.toString();
@@ -51,6 +59,10 @@ class LiteralNode extends ExpressionNode {
 class UnaryNode extends ExpressionNode {
   constructor(public a: ExpressionNode, public op: UnaryOperation) {
     super();
+  }
+
+  getUsedDigits(): number[] {
+    return this.a.getUsedDigits();
   }
 
   toHTML(): string {
@@ -91,6 +103,10 @@ class UnaryNode extends ExpressionNode {
 class BinaryNode extends ExpressionNode {
   constructor(public a: ExpressionNode, public op: BinaryOperation, public b: ExpressionNode) {
     super();
+  }
+
+  getUsedDigits(): number[] {
+    return [...this.a.getUsedDigits(), ...this.b.getUsedDigits()];
   }
 
   toHTML(): string {
@@ -151,16 +167,21 @@ const App = () => {
   const [tableData, setTableData] = useState<{target: number; equation: string, operations: number}[]>([]);
   const [created, setCreated] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
+  const [isCalculating, setIsCalculating] = useState(false);
 
   useEffect(() => {
     // Regenerate table rows when maximum changes
+    initializeTable();
+  }, [maximum]);
+
+  const initializeTable = () => {
     const newTable = Array.from({ length: maximum }, (_, i) => ({
       target: i + 1,
       equation: '',
       operations: 0
     }));
     setTableData(newTable);
-  }, [maximum]);
+  }
 
   const handleCheckboxChange = (key: keyof typeof operations) => {
     setOperations((prev) => ({
@@ -170,38 +191,62 @@ const App = () => {
   };
 
   const viewResults = () => {
-    setIsVisible(true);
+    setIsVisible(!isVisible);
   }
 
   const handleCalculate = () => {
+    setIsCalculating(true);
+    initializeTable();
+    setTimeout(_handleCalculate);
+  }
+
+  const _handleCalculate = () => {
     const newTable = tableData.map(row => ({
       ...row,
       equation: '',
       operations: 0
     }));
-    setTableData(newTable);
-
     try {
       console.log(`Processing ${numbersInput}`);
       const maxSquare = operations.square?operations.unlimitedSquare?4:1:0;
       const maxSqrt = operations.sqrt?operations.unlimitedRoot?4:1:0;
       const numbers = numbersInput.split(',').map(Number).filter(n=>!isNaN(n)).sort().map(n=>new LiteralNode(n));
-      console.log({maxSquare, maxSqrt});
-
-      let processed = new Set<string>();
       let buildExpressions = (arr: ExpressionNode[]): ExpressionNode[] => {
+        // keep track of the best way to make any number.
+        // If we ever come across a number that we already know how to make using the same digits, only keep this one if it is fewer operations
+        // key is comma-separated digits that are being used (ascending order)
+        // object is the expression that makes this 
+        let cache: Map<string, ExpressionNode>[] = [];
+        let processed = new Set<string>();
         let result: ExpressionNode[] = [];
+        let maybeAdd = (expr: ExpressionNode) => {
+          let val = expr.compute();
+          if (!isNaN(val) && val > 0) {
+            let map = cache[val];
+            if (map === undefined) {
+              map = new Map<string, ExpressionNode>();
+              cache[val] = map;
+            }
+            let key = expr.getUsedDigitKey();
+            let current = map.get(key);
+            if (current === undefined || expr.operations() < current.operations()) {
+              map.set(key, expr);
+              result.push(expr);
+            }
+          }
+        }
+
         let addUnaries = (a: ExpressionNode, b: ExpressionNode, op: BinaryOperation) => {
           let ae = a;
           for (let i=0; i<=maxSquare; i++) {
             let be = b;
             for (let j=0; j<=maxSquare; j++) {
-              result.push(new BinaryNode(ae, op, be));
+              maybeAdd(new BinaryNode(ae, op, be));
               be = new UnaryNode(be, '^');
             }
             be = b;
             for (let j=0; j<=maxSqrt; j++) {
-              result.push(new BinaryNode(ae, op, be));
+              maybeAdd(new BinaryNode(ae, op, be));
               be = new UnaryNode(be, '_');
             }
             ae = new UnaryNode(ae, '^');
@@ -211,12 +256,12 @@ const App = () => {
           for (let i=0; i<=maxSqrt; i++) {
             let be = b;
             for (let j=0; j<=maxSquare; j++) {
-              result.push(new BinaryNode(ae, op, be));
+              maybeAdd(new BinaryNode(ae, op, be));
               be = new UnaryNode(be, '^');
             }
             be = b;
             for (let j=0; j<=maxSqrt; j++) {
-              result.push(new BinaryNode(ae, op, be));
+              maybeAdd(new BinaryNode(ae, op, be));
               be = new UnaryNode(be, '_');
             }
             ae = new UnaryNode(ae, '_');
@@ -252,10 +297,16 @@ const App = () => {
           choose2(arr).forEach(set => {
             let key = `${set.a.toString()}&${set.b.toString()}[${set.rest.map(e=>e.toString()).join(',')}]`;
             if (!processed.has(key)) {
-              for (let expr of buildExpressions([set.a, set.b])) {
-                result.push(...buildExpressions([expr, ...set.rest]));
-              };
               processed.add(key);
+              for (let expr of buildExpressions([set.a, set.b])) {
+                let key = `${expr.toString()}[${set.rest.map(e=>e.toString()).join(',')}]`;
+                if (!processed.has(key)) {
+                  processed.add(key);
+                  for (let subExpr of buildExpressions([expr, ...set.rest])) {
+                    maybeAdd(subExpr);
+                  }
+                }
+              };
             }
           });
         }
@@ -281,13 +332,12 @@ const App = () => {
 
       setTableData(newTable);
       setCreated(count);
-      setIsVisible(false);
       console.log('complete');
     } catch (e) {
       console.error(e);
       alert('Too complicated, try reducing the number of checked options or the number of dice');
-    }
-
+    } 
+    setIsCalculating(false);
   };
 
   return (
@@ -348,11 +398,14 @@ const App = () => {
         </div>
       </div>
 
-      <button onClick={handleCalculate} className="mb-4 bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600">
-        Calculate
-      </button>
-      <span onClick={viewResults}>Successfully Created: {created}</span>
-
+      <div>
+          <div className="flex items-center justify-center">
+            <button onClick={handleCalculate} disabled={isCalculating} type="button" className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 inline-flex items-center">
+              Calculate
+            </button>
+            &nbsp; <span onClick={viewResults}>Successfully Created: {created}</span>
+          </div>
+      </div>
       {isVisible && (
       <table className="w-full border-collapse">
         <thead>
