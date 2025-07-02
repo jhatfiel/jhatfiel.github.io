@@ -194,14 +194,23 @@ const App = () => {
     setIsVisible(!isVisible);
   }
 
+  const randomRoll = () => {
+    let newValue = Array.from({length: 3}, _ => Math.floor(Math.random()*6)+1).sort().join(',');
+    setNumbersInput(newValue);
+    initializeTable();
+    setCreated(-1);
+    setIsCalculating(true);
+    setTimeout(()=>_handleCalculate(newValue));
+  }
+
   const handleCalculate = () => {
     initializeTable();
     setCreated(-1);
     setIsCalculating(true);
-    setTimeout(_handleCalculate);
+    setTimeout(()=>_handleCalculate(numbersInput));
   }
 
-  const _handleCalculate = () => {
+  const _handleCalculate = (numbersInput: string) => {
     const newTable = tableData.map(row => ({
       ...row,
       equation: '',
@@ -355,14 +364,19 @@ const App = () => {
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 mb-4">
-        <input
-          type="text"
-          value={numbersInput}
-          onChange={(e) => setNumbersInput(e.target.value)}
-          onKeyUp={(e) => e.key === 'Enter' && handleCalculate()}
-          placeholder="Enter your comma-separated dice"
-          className="flex-1 p-2 border rounded"
-        />
+        <div className="flex flex-row">
+          <input
+            type="text"
+            value={numbersInput}
+            onChange={(e) => setNumbersInput(e.target.value)}
+            onKeyUp={(e) => e.key === 'Enter' && handleCalculate()}
+            placeholder="Enter your comma-separated dice"
+            className="flex-1 p-2 border rounded"
+          />
+          <button onClick={randomRoll} disabled={isCalculating} type="button" className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 inline-flex items-center">
+            Roll 3 Dice
+          </button>
+        </div>
 
         <div className="grid grid-cols-2 gap-2 md:grid-cols-1">
           <label><input type="checkbox" checked={operations.add} onChange={() => handleCheckboxChange('add')} /> + (ADD)</label>
@@ -405,7 +419,7 @@ const App = () => {
             <button onClick={handleCalculate} disabled={isCalculating} type="button" className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 inline-flex items-center">
               Calculate
             </button>
-            &nbsp; <span onClick={viewResults}>Successfully Created: {created>=0?created:'Calculating...'}</span>
+            &nbsp; <span onClick={viewResults}>Successfully Created: {created>=0?created:'...'}</span>
           </div>
       </div>
       {isVisible && (
