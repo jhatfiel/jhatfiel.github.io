@@ -167,6 +167,9 @@ const App = () => {
   const [tableData, setTableData] = useState<{target: number; equation: string, operations: number}[]>([]);
   const [created, setCreated] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(true);
+  const [showOperations, setShowOperations] = useState(false);
+  const [pulse, setPulse] = useState(false);
   const [isCalculating, setIsCalculating] = useState(false);
 
   useEffect(() => {
@@ -190,8 +193,13 @@ const App = () => {
     }));
   };
 
-  const viewResults = () => {
+  const toggleResults = () => {
+    setPulse(false);
     setIsVisible(!isVisible);
+  }
+
+  const toggleOperations = () => {
+    setShowOperations(!showOperations);
   }
 
   const randomRoll = () => {
@@ -326,7 +334,6 @@ const App = () => {
 
       let count = 0;
       let expressions = buildExpressions(numbers);
-      console.log(`Evaluating ${expressions.length} expressions`);
       for (let expr of expressions) {
         let value = expr.compute();
         if (value > 0 && value <= maximum) {
@@ -336,7 +343,6 @@ const App = () => {
             if (row.equation === '') count++;
             row.equation = expr.toHTML();
             row.operations = expr.operations();
-            console.log(`${expr.toString()} = ${value}`);
           }
         }
       }
@@ -349,36 +355,60 @@ const App = () => {
       alert('Too complicated, try reducing the number of checked options or the number of dice');
     } 
     setIsCalculating(false);
+    setPulse(true);
   };
 
   return (
     <div className="p-4 max-w-screen-lg mx-auto font-sans">
-      <h1 className="text-3xl font-bold mb-2">Dice Knockout</h1>
-
-      <div className="mb-4 p-3 rounded shadow">
+      <h2 className="text-3xl font-bold mb-2">Dice Knockout</h2>
+      <div className="mb-4 rounded shadow">
+      {!showInstructions && (
+        <><a onClick={()=>setShowInstructions(true)}>Show Instructions</a></>
+      )}
+      {showInstructions && (
+        <><b>Instructions</b> <a onClick={()=>setShowInstructions(false)}>HIDE</a><br/>
         <p className="text-sm">In Dice Knockout, the objective is to use the digits on some number of rolled dice to generate your target numbers (say, from 1-19).</p>
-        <br/>
-        <p className="text-sm">Enter your rolled dice and the rules then press&nbsp;<span className="font-mono, bg-black"> Calculate </span>&nbsp;to see what target numbers can be created.</p>
-        <br/>
-        <p className="text-sm">Tap the&nbsp;<span className="font-mono, bg-black"> Successfully Created </span>&nbsp;line to view the Equations that create each target number.</p>
+        <p className="text-sm">Tap &nbsp;<span className="font-mono, bg-blue-700"> Roll 3 Dice </span>&nbsp; to simulate the roll of 3 dice or enter your rolled dice then tap&nbsp;<span className="font-mono, bg-blue-700"> Calculate </span>&nbsp;to see what target numbers can be created.</p></>
+      )}
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4 mb-4">
-        <div className="flex flex-row">
-          <input
-            type="text"
-            value={numbersInput}
-            onChange={(e) => setNumbersInput(e.target.value)}
-            onKeyUp={(e) => e.key === 'Enter' && handleCalculate()}
-            placeholder="Enter your comma-separated dice"
-            className="flex-1 p-2 border rounded"
-          />
-          <button onClick={randomRoll} disabled={isCalculating} type="button" className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 inline-flex items-center">
+      <div className="flex flex-col md:flex-row gap-2 mb-2">
+        <div className="flex items-center justify-center">
+          <button onClick={randomRoll} disabled={isCalculating} type="button"
+          className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 inline-flex items-center">
             Roll 3 Dice
           </button>
         </div>
-
+        <div>
+          <div className="flex flex-row">
+            <input
+              type="text"
+              value={numbersInput}
+              onChange={(e) => setNumbersInput(e.target.value)}
+              onKeyUp={(e) => e.key === 'Enter' && handleCalculate()}
+              placeholder="Enter your comma-separated dice"
+              className="flex-1 p-2 m-2 border rounded"
+            />
+            <button onClick={handleCalculate} disabled={isCalculating} type="button"
+             className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 inline-flex items-center m-2">
+              Calculate
+            </button>
+          </div>
+        </div>
+        {!showOperations && (
+        <span onClick={toggleOperations}>Valid Operations: <span dangerouslySetInnerHTML={{'__html': 
+          [
+            (operations.add?'+':undefined),
+            (operations.subtract?'-':undefined),
+            (operations.multiply?'*':undefined),
+            (operations.divide?'/':undefined),
+            (operations.square?(operations.unlimitedSquare?'unlimited ':'') + '&sup2;':undefined),
+            (operations.sqrt?(operations.unlimitedRoot?'unlimited ':'') + '&radic;':undefined),
+          ].filter(o=>o).join(',')}}></span></span>
+        )}
+        {showOperations && (
         <div className="grid grid-cols-2 gap-2 md:grid-cols-1">
+          <div className="col-span-2">Valid Operations <a onClick={toggleOperations}>HIDE</a></div>
           <label><input type="checkbox" checked={operations.add} onChange={() => handleCheckboxChange('add')} /> + (ADD)</label>
           <label><input type="checkbox" checked={operations.subtract} onChange={() => handleCheckboxChange('subtract')} /> - (SUBTRACT)</label>
           <label><input type="checkbox" checked={operations.multiply} onChange={() => handleCheckboxChange('multiply')} /> * (MULTIPLY)</label>
@@ -412,22 +442,15 @@ const App = () => {
             />
           </label>
         </div>
+        )}
       </div>
 
-      <div>
-          <div className="flex items-center justify-center">
-            <button onClick={handleCalculate} disabled={isCalculating} type="button" className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 inline-flex items-center">
-              Calculate
-            </button>
-            &nbsp; <span onClick={viewResults}>Successfully Created: {created>=0?created:'...'}</span>
-          </div>
-      </div>
       {isVisible && (
       <table className="w-full border-collapse">
         <thead>
           <tr>
             <th className="border px-2 py-1 text-left">Target</th>
-            <th className="border px-2 py-1 text-left">Equation</th>
+            <th className="border px-2 py-1 text-left relative">Equation ({created>=0?`${created} created`:'Calculating...'}) <div className="absolute right-1 top-0"><a className="right" onClick={toggleResults}>HIDE</a></div></th>
           </tr>
         </thead>
         <tbody>
@@ -439,6 +462,9 @@ const App = () => {
           ))}
         </tbody>
       </table>
+      )}
+      {!isVisible && (
+        (created>0)?(<span onClick={toggleResults}><span className={pulse?'animate-pulse':''}>Tap to show</span> {created} results</span>):'Calculating...'
       )}
     </div>
   );
