@@ -464,7 +464,7 @@ const App = () => {
       </table>
       )}
       {!isVisible && (
-        (created>0)?(<span onClick={toggleResults}><span className={pulse?'animate-pulse':''}>Tap to show</span> {created} results</span>):'Calculating...'
+        (created>=0)?(<span onClick={toggleResults}><span className={pulse?'animate-pulse':''}>Tap to show</span> {created} results</span>):'Calculating...'
       )}
     </div>
   );
