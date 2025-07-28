@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface PartialSet<T> {
   a: T;
@@ -7,7 +7,7 @@ interface PartialSet<T> {
 };
 
 function choose2<T>(arr: T[]): PartialSet<T>[] {
-  let result = [];
+  const result = [];
   for (let i=0; i<arr.length-1; i++) {
     for (let j=i+1; j<arr.length; j++) {
       result.push({a: arr[i], b: arr[j], rest: [...arr.slice(0, i), ...arr.slice(i+1, j), ...arr.slice(j+1)]});
@@ -172,19 +172,19 @@ const App = () => {
   const [pulse, setPulse] = useState(false);
   const [isCalculating, setIsCalculating] = useState(false);
 
-  useEffect(() => {
-    // Regenerate table rows when maximum changes
-    initializeTable();
-  }, [maximum]);
-
-  const initializeTable = () => {
+  const initializeTable = useCallback(() => {
     const newTable = Array.from({ length: maximum }, (_, i) => ({
       target: i + 1,
       equation: '',
       operations: 0
     }));
     setTableData(newTable);
-  }
+  }, [maximum]);
+
+  useEffect(() => {
+    // Regenerate table rows when maximum changes
+    initializeTable();
+  }, [maximum, initializeTable]);
 
   const handleCheckboxChange = (key: keyof typeof operations) => {
     setOperations((prev) => ({
@@ -203,7 +203,7 @@ const App = () => {
   }
 
   const randomRoll = () => {
-    let newValue = Array.from({length: 3}, _ => Math.floor(Math.random()*6)+1).sort().join(',');
+    const newValue = Array.from({length: 3}, () => Math.floor(Math.random()*6)+1).sort().join(',');
     setNumbersInput(newValue);
     initializeTable();
     setCreated(-1);
@@ -233,21 +233,21 @@ const App = () => {
       // If we ever come across a number that we already know how to make using the same digits, only keep this one if it is fewer operations
       // key is comma-separated digits that are being used (ascending order)
       // object is the expression that makes this 
-      let cache: Map<string, ExpressionNode>[] = [];
-      let processed = new Set<string>();
+      const cache: Map<string, ExpressionNode>[] = [];
+      const processed = new Set<string>();
 
-      let buildExpressions = (arr: ExpressionNode[]): ExpressionNode[] => {
-        let result: ExpressionNode[] = [];
-        let maybeAdd = (expr: ExpressionNode) => {
-          let val = expr.compute();
+      const buildExpressions = (arr: ExpressionNode[]): ExpressionNode[] => {
+        const result: ExpressionNode[] = [];
+        const maybeAdd = (expr: ExpressionNode) => {
+          const val = expr.compute();
           if (!isNaN(val) && val > 0) {
             let map = cache[val];
             if (map === undefined) {
               map = new Map<string, ExpressionNode>();
               cache[val] = map;
             }
-            let key = expr.getUsedDigitKey();
-            let current = map.get(key);
+            const key = expr.getUsedDigitKey();
+            const current = map.get(key);
             if (current === undefined || expr.operations() < current.operations()) {
               map.set(key, expr);
               result.push(expr);
@@ -255,7 +255,7 @@ const App = () => {
           }
         }
 
-        let addUnaries = (a: ExpressionNode, b: ExpressionNode, op: BinaryOperation) => {
+        const addUnaries = (a: ExpressionNode, b: ExpressionNode, op: BinaryOperation) => {
           let ae = a;
           for (let i=0; i<=maxSquare; i++) {
             let be = b;
@@ -288,8 +288,8 @@ const App = () => {
         }
 
         if (arr.length === 2) {
-          let [a,b] = arr;
-          let [av, bv] = [a.compute(), b.compute()];
+          const [a,b] = arr;
+          const [av, bv] = [a.compute(), b.compute()];
 
           if (operations.add) {
             addUnaries(a, b, '+');
@@ -314,14 +314,14 @@ const App = () => {
           }
         } else {
           choose2(arr).forEach(set => {
-            let key = `${set.a.toString()}&${set.b.toString()}[${set.rest.map(e=>e.toString()).join(',')}]`;
+            const key = `${set.a.toString()}&${set.b.toString()}[${set.rest.map(e=>e.toString()).join(',')}]`;
             if (!processed.has(key)) {
               processed.add(key);
-              for (let expr of buildExpressions([set.a, set.b])) {
-                let key = `${expr.toString()}[${set.rest.map(e=>e.toString()).join(',')}]`;
+              for (const expr of buildExpressions([set.a, set.b])) {
+                const key = `${expr.toString()}[${set.rest.map(e=>e.toString()).join(',')}]`;
                 if (!processed.has(key)) {
                   processed.add(key);
-                  for (let subExpr of buildExpressions([expr, ...set.rest])) {
+                  for (const subExpr of buildExpressions([expr, ...set.rest])) {
                     result.push(subExpr);
                   }
                 }
@@ -333,11 +333,11 @@ const App = () => {
       };
 
       let count = 0;
-      let expressions = buildExpressions(numbers);
-      for (let expr of expressions) {
-        let value = expr.compute();
+      const expressions = buildExpressions(numbers);
+      for (const expr of expressions) {
+        const value = expr.compute();
         if (value > 0 && value <= maximum) {
-          let row = newTable.filter(td => td.target === value)[0];
+          const row = newTable.filter(td => td.target === value)[0];
           //console.log(`Found ${value} from ${expr.toString()}, row=${row.equation}`);
           if (row.equation === '' || expr.operations() < row.operations) {
             if (row.equation === '') count++;
