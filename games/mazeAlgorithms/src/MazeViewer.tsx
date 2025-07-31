@@ -1,9 +1,4 @@
-import { Stage, Layer, Rect, Line } from 'react-konva';
-import useElementDimensions from './useElementDimensions';
-import { Fragment, useEffect, useRef } from 'react';
-import Konva from 'konva';
-//Konva.showWarnings=true;
-//Konva.pixelRatio=1;
+import { useEffect, useRef } from 'react';
 
 type Direction = 'N'|'E'|'S'|'W';
 const dirArray: {dir: Direction, xd: number, yd: number, oDir: Direction}[] = [
@@ -26,36 +21,37 @@ interface Maze {
 
 interface Cell {
   walls: {N: boolean, E: boolean, S: boolean, W: boolean};
+  wallCount: number;
   highlighted: boolean;
 }
 
-const cellSize = 4;
-const WIDTH=100;
-const HEIGHT=50;
+const cellSize = 16;
+const WIDTH=40;
+const HEIGHT=20;
 const startTime = Date.now();
 let initialized = false;
 let count = 0;
 
-const MAZE: Maze = {cells: Array.from({length: HEIGHT+2}, ()=>Array.from({length: WIDTH+2}, ()=>({walls: {N:true,E:true,S:true,W:true}, highlighted: false})))};
+const MAZE: Maze = {cells: Array.from({length: HEIGHT+2}, ()=>Array.from({length: WIDTH+2}, ()=>({walls: {N:true,E:true,S:true,W:true}, wallCount: 4, highlighted: false})))};
 
 function MazeViewer() {
-  const cellRefs = useRef<Map<string, Konva.Line>>(new Map());
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  function hideWall(x: number, y: number, dir: Direction) {
-    //cellRefs.current.set(`${x}-${y}-${x+dm.xd}-${y+dm.yd}-${dm.dir}`, node);
-    const dm = dirMapping[dir];
-    const key = `${x}-${y}-${x+dm.xd}-${y+dm.yd}-${dm.dir}`;
-    const line = cellRefs.current.get(key);
-    if (line) {
-      line.visible(false);
-      //line.getLayer()?.batchDraw();
-    } else {
-      console.log(`No line found for key ${key} at (${x},${y}) in direction ${dir}`); // log if no line found
-    }
+  function drawCell(ctx: CanvasRenderingContext2D, x: number, y: number) {
+    const px = x*cellSize+1;
+    const py = y*cellSize+1;
+    ctx.fillRect(px, py, cellSize-2, cellSize-2);
   }
 
-  const { dimensions, ref } = useElementDimensions();
-  const { height, width } = dimensions ?? {};
+  function eraseWall(ctx: CanvasRenderingContext2D, x: number, y: number, dir: Direction) {
+    const dm = dirMapping[dir];
+    const x1 = (x + (dir === 'E'?1:0)) * cellSize + (dm.xd===0?-1:1);
+    const y1 = (y + (dir === 'S'?1:0)) * cellSize + (dm.yd===0?-1:1);
+    const x2 = (x + (dir === 'E'?1:0)) * cellSize + (dm.yd === 0?cellSize:0) + (dm.xd===0?1:-1);
+    const y2 = (y + (dir === 'S'?1:0)) * cellSize + (dm.xd === 0?cellSize:0) + (dm.yd===0?1:-1);
+    //console.log(`Erasing wall at (${x},${y}) in direction ${dir} from (${x1},${y1}) to (${x2},${y2})`);
+    ctx.fillRect(x1, y1, x2-x1, y2-y1);
+  }
 
   // random wall remover to test animation
   // this isn't supposed to generate a legit maze, it's just removing walls up to a limit
@@ -63,6 +59,20 @@ function MazeViewer() {
     if (initialized) return; // only run once
     initialized = true;
     console.log(`Starting random wall remover`);
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.strokeStyle = 'white';
+    ctx.fillStyle='white';
+
+    for (let y=1; y<=HEIGHT; y++) {
+      for (let x=1; x<=WIDTH; x++) {
+        drawCell(ctx, x-1, y-1);
+      }
+    }
+
     setTimeout(function randomWallRemover() {
       const now = Date.now();
       let tries = 0;
@@ -73,9 +83,11 @@ function MazeViewer() {
       let cell = MAZE.cells[y][x]
       let dir = dirArray[dirIndex];
       while ((cell.walls[dir.dir] === false // pick a new cell/wall if the selected wall is already gone
-        || (['N','E','S','W'] as Direction[]).filter(d=>cell.walls[d] === false).length>=2 // or the selected cell has already lost too many walls
+        //|| (['N','E','S','W'] as Direction[]).filter(d=>cell.walls[d] === false).length>=2 // or the selected cell has already lost too many walls
+        || cell.wallCount < 3 // or the selected cell has already lost too many walls
         || y+dir.yd==0 || x+dir.xd==0 || y+dir.yd>HEIGHT || x+dir.xd>WIDTH
-        || (['N','E','S','W'] as Direction[]).filter(d=>MAZE.cells[y+dir.yd][x+dir.xd].walls[d] === false).length>=2 // or the adjacent cell has already lost too many walls
+        //|| (['N','E','S','W'] as Direction[]).filter(d=>MAZE.cells[y+dir.yd][x+dir.xd].walls[d] === false).length>=2 // or the adjacent cell has already lost too many walls
+        || MAZE.cells[y+dir.yd][x+dir.xd].wallCount < 3 // or the selected cell has already lost too many walls
         ) && tries < 100) { // but don't try more than 100 times
         x=Math.floor(Math.random()*WIDTH)+1;
         y=Math.floor(Math.random()*HEIGHT)+1;
@@ -90,18 +102,13 @@ function MazeViewer() {
         return;
       }
 
-      cell = {...MAZE.cells[y][x]};
-      MAZE.cells[y][x] = cell;
-      cell.walls = {...cell.walls};
-      cell.walls[dir.dir] = false;
+      MAZE.cells[y][x].walls[dir.dir] = false;
+      MAZE.cells[y][x].wallCount--;
 
-      cell = {...MAZE.cells[y+dir.yd][x+dir.xd]};
-      MAZE.cells[y+dir.yd][x+dir.xd] = cell;
-      cell.walls = {...cell.walls};
-      cell.walls[dir.oDir] = false;
+      MAZE.cells[y+dir.yd][x+dir.xd].walls[dir.oDir] = false;
+      MAZE.cells[y+dir.yd][x+dir.xd].wallCount--;
 
-      hideWall(x-1, y-1, dir.dir);
-      //hideWall(x+dir.xd, y+dir.yd, dir.oDir);
+      eraseWall(ctx, x-1, y-1, dir.dir);
 
       count++;
       console.log(`[${count.toString().padStart(4,' ')}] (${Date.now()-now}ms) Removing wall at (${x-1},${y-1}) in direction ${dir.dir} / tries=${tries} / walls=${JSON.stringify(cell.walls)}`);
@@ -110,63 +117,10 @@ function MazeViewer() {
     })
   }, []);
 
-  function Wall({x, y, dir}: {x: number, y: number, dir: Direction}) {
-    const dm = dirMapping[dir];
-    // {cell.walls.N && (<Line points={[x*cellSize,y*cellSize,(x+1)*cellSize,y*cellSize]} stroke='black' listening={false}/>)}
-    // {cell.walls.E && (<Line points={[(x+1)*cellSize,y*cellSize,(x+1)*cellSize,(y+1)*cellSize]} stroke='black' listening={false}/>)}
-    // {cell.walls.S && (<Line points={[x*cellSize,(y+1)*cellSize,(x+1)*cellSize,(y+1)*cellSize]} stroke='black' listening={false}/>)}
-    // {cell.walls.W && (<Line points={[x*cellSize,y*cellSize,x*cellSize,(y+1)*cellSize]} stroke='black' listening={false}/>)}
-    const x1 = (x + (dir === 'E'?1:0)) * cellSize;
-    const y1 = (y + (dir === 'S'?1:0)) * cellSize;
-    const x2 = x1 + (dm.xd === 0?cellSize:0);
-    const y2 = y1 + (dm.yd === 0?cellSize:0);
-    x--; y--;
-    return (
-      <Line
-        ref={node=>{
-          if (node) {
-            cellRefs.current.set(`${x}-${y}-${x+dm.xd}-${y+dm.yd}-${dm.dir}`, node);
-            cellRefs.current.set(`${x+dm.xd}-${y+dm.yd}-${x}-${y}-${dm.oDir}`, node);
-          }
-        }}
-        points={[x1, y1, x2, y2]}
-        stroke={'black'}
-        listening={false}
-      />
-      );
-  }
-
-  // need to keep track of rectangles in a refs map as well so we can change their color
-  return (
-    <div ref={ref} style={{height:"100%", width:"100%"}}>
-      <Stage width={width} height={height} drawBorders={true}>
-        <Layer perfectDrawEnabled={false} listening={false} cacheEnabled={true}>
-          <Rect x={0} y={0} width={width} height={height} fill="white"/>
-        </Layer>
-        <Layer perfectDrawEnabled={false} listening={false} cacheEnabled={true}>
-          {MAZE.cells.map((row, y) => 
-            row.map((_cell, x) => (
-              <Fragment key={`${x}-${y}`}>
-                {x>0 && y>0 && x<=WIDTH && y<=HEIGHT && (
-                  <Rect
-                    x={(x)*cellSize + 1}
-                    y={(y)*cellSize + 1}
-                    width={(x)*cellSize - 2}
-                    height={(y)*cellSize - 2}
-                    fill='white'/>
-                )}
-
-                {/* {x>0 && x<=WIDTH && y>0 && (<Wall x={x} y={y} dir='N'/>)} */}
-                {x>0 && x<=WIDTH && y<=HEIGHT && (<Wall x={x} y={y} dir='S'/>)}
-
-                {y>0 && y<=HEIGHT && x<=WIDTH && (<Wall x={x} y={y} dir='E'/>)}
-                {/* {y>0 && y<=HEIGHT && x>0 && (<Wall x={x} y={y} dir='W'/>)} */}
-              </Fragment>
-            )))}
-        </Layer>
-      </Stage>
-  </div>
-  );
+  return <div style={{width: '100%', height: '100%'}}>
+      <canvas ref={canvasRef} width={(WIDTH+2)*cellSize} height={(HEIGHT+2)*cellSize} style={{display: 'block'}}/>
+    </div>
+      //<canvas ref={canvasRef} width={width} height={height} style={{display: 'block'}}/>
 }
 
 export default MazeViewer;

@@ -10,11 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "konva": "^9.3.22",
     "rc-slider": "^11.1.8",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-konva": "^19.0.7",
     "react-select": "^5.10.2"
   },
   "devDependencies": {
