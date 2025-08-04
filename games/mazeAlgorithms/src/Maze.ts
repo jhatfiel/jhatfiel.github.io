@@ -34,7 +34,9 @@ interface Cell {
 };
 
 type Direction = 'N'|'E'|'S'|'W';
-const dirArray: {dir: Direction, xd: number, yd: number, oDir: Direction}[] = [
+const DirectionArray: Direction[] = ['N','E','S','W'];
+type DirectionDetails = {dir: Direction, xd: number, yd: number, oDir: Direction}
+const dirArray: DirectionDetails[] = [
   {dir: 'N', xd:  0, yd: -1, oDir: 'S'},
   {dir: 'E', xd:  1, yd:  0, oDir: 'W'},
   {dir: 'S', xd:  0, yd:  1, oDir: 'N'},
@@ -48,5 +50,10 @@ const dirMapping = {
   W: dirArray[3],
 };
 
-export type { Direction };
-export { Maze, dirMapping, dirArray };
+interface Pair {
+  x: number;
+  y: number;
+}
+
+export type { Direction, DirectionDetails, Pair };
+export { Maze, dirMapping, dirArray, DirectionArray };

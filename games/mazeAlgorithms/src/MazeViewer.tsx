@@ -25,11 +25,6 @@ function MazeViewer({width, height, callback}: MazeViewerProps) {
 
   function eraseWall(x: number, y: number, dir: Direction) {
     const dm = dirMapping[dir];
-    // const x1 = buffer + (x + (dir === 'E'?1:0)) * cellSize + (dm.xd === 0?-1:1);
-    // const y1 = buffer + (y + (dir === 'S'?1:0)) * cellSize + (dm.yd === 0?-1:1);
-    // const x2 = buffer + (x + (dir === 'S'?1:0)) * cellSize + (dm.yd === 0?cellSize:0) + (dm.xd === 0?1:-1);
-    // const y2 = buffer + (y + (dir === 'E'?1:0)) * cellSize + (dm.xd === 0?cellSize:0) + (dm.yd === 0?1:-1);
-
     let x1 = buffer + (x + (dir==='E'?1:0))*cellSize;
     let y1 = buffer + (y + (dir==='S'?1:0))*cellSize;
     let x2 = x1 + (dm.xd===0?cellSize:0);
@@ -71,7 +66,6 @@ function MazeViewer({width, height, callback}: MazeViewerProps) {
   return <div style={{width: '100%', height: '100%'}}>
       <canvas ref={canvasRef} width={(width)*cellSize + 2*buffer} height={(height)*cellSize + 2*buffer} style={{display: 'block'}}/>
     </div>
-      //<canvas ref={canvasRef} width={width} height={height} style={{display: 'block'}}/>
 }
 
 export default MazeViewer;

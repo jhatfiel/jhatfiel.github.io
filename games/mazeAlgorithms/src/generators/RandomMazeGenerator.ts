@@ -7,7 +7,7 @@ class RandomMazeGenerator extends MazeGenerator {
   startTime = Date.now();
   count = 0;
 
-  getNextWallToRemove(): {x: number, y: number, dir: Direction} | null {
+  getNextWallToRemove(): {x: number, y: number, dir: Direction} | undefined {
     const maze = this.maze;
     const width = maze.width;
     const height = maze.height;
@@ -36,9 +36,8 @@ class RandomMazeGenerator extends MazeGenerator {
     }
 
     if (tries >= 100) {
-      self.postMessage({method: 'done'});
       console.log(`Giving up on finding walls to remove - total time: ${Date.now()-this.startTime}ms for ${this.count} walls removed`);
-      return null;
+      return undefined;
     }
 
     maze.removeWall(x, y, dir.dir);

@@ -1,12 +1,18 @@
 import type MazeGenerator from "./generators/MazeGenerator";
 import RandomMazeGenerator from "./generators/RandomMazeGenerator";
+import RecursiveBacktrackingGenerator from "./generators/RecursiveBacktrackingGenerator";
 import { type Direction, Maze } from "./Maze";
 
 type Algorithm = 'Random' | 'RecursiveBacktracking' | 'Wilsons';
 
 async function sleep(ms: number) {
   if (ms <= 0) return;
-  return new Promise(resolve => setTimeout(resolve, ms));
+  else if (ms <= 10) {
+    const now = performance.now();
+    while (performance.now() - now < ms)
+      // busy wait
+      ;
+  } else return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 let _delay = 0;
@@ -26,6 +32,9 @@ self.onmessage = function({data: {method, maze, algorithm, delay = 0}}: {data: {
       case 'Random':
         mazeGenerator = new RandomMazeGenerator(_maze);
         break;
+      case 'RecursiveBacktracking':
+        mazeGenerator = new RecursiveBacktrackingGenerator(_maze);
+        break;
       default:
         mazeGenerator = null;
         console.error(`Unknown algorithm: ${algorithm}`);
@@ -44,13 +53,13 @@ self.onmessage = function({data: {method, maze, algorithm, delay = 0}}: {data: {
   }
 };
 
-function removeNextWall(): {x: number, y: number, dir: Direction} | null {
+function removeNextWall(): {x: number, y: number, dir: Direction} | undefined {
   const result = mazeGenerator?.getNextWallToRemove();
   if (result === undefined) {
     // no more walls to remove
     state = 'stopped';
     self.postMessage({method: 'done'});
-    return null;
+    return undefined;
   } else {
     // let the main thread know about the wall removal
     self.postMessage({...result, method: 'removeWall'});
@@ -60,6 +69,7 @@ function removeNextWall(): {x: number, y: number, dir: Direction} | null {
 
 async function step() {
   while (state === 'playing') {
+    const now = performance.now();
     const result = removeNextWall();
     if (!result) {
       state = 'stopped';
@@ -67,7 +77,7 @@ async function step() {
       return;
     }
 
-    await sleep(_delay);
+    await sleep(_delay - (performance.now()-now));
   }
 }
 

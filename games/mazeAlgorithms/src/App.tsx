@@ -5,7 +5,7 @@ import { Maze, type Direction } from './Maze';
 import type { Algorithm } from './MazeGeneratorWorker';
 
 function App() {
-  const [algorithm, setAlgorithm] = useState<Algorithm>('Random');
+  const [algorithm, setAlgorithm] = useState<Algorithm>('RecursiveBacktracking');
   const [width, setWidth] = useState(40);
   const [height, setHeight] = useState(20);
   const [delay, setDelay] = useState(0);
@@ -109,7 +109,7 @@ function App() {
           <input 
             type="range" 
             min={0} 
-            max={2000} 
+            max={500} 
             value={delay} 
             onChange={e => setDelay(parseInt(e.target.value))}
             style={{width: '8rem', marginLeft: '0.5rem'}}
@@ -117,7 +117,7 @@ function App() {
           {delay}ms
         </label>
         <button onClick={handlePlayPause}>
-          {isPlaying ? '⏸️ Pause' : '▶️ Play'}
+          {isPlaying ? '⏸️' : '▶️'}
         </button>
       </div>
       <div style={{flex: '1', minHeight: 0}}>
