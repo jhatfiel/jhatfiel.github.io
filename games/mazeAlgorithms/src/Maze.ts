@@ -1,3 +1,17 @@
+interface Pair {
+  x: number;
+  y: number;
+}
+
+interface Segment {
+  p1: Pair;
+  p2: Pair;
+}
+
+function pick<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random()*arr.length)];
+}
+
 class Maze {
   cells: Cell[][];
 
@@ -25,6 +39,20 @@ class Maze {
       }
     }
   }
+
+  getSegments(): Segment[] {
+    const segments: Segment[] = [];
+    for (let y=0; y<this.height; y++) {
+      for (let x=0; x<this.width; x++) {
+        const cell = this.cells[y][x];
+        if (y === 0 && cell.walls.N) segments.push({p1: {x, y}, p2: {x:x+1, y}});
+        if (x === 0 && cell.walls.W) segments.push({p1: {x, y}, p2: {x, y:y+1}});
+        if (cell.walls.E)            segments.push({p1: {x:x+1, y}, p2: {x:x+1, y:y+1}});
+        if (cell.walls.S)            segments.push({p1: {x, y:y+1}, p2: {x:x+1, y:y+1}});
+      }
+    }
+    return segments;
+  }
 };
 
 interface Cell {
@@ -50,10 +78,5 @@ const dirMapping = {
   W: dirArray[3],
 };
 
-interface Pair {
-  x: number;
-  y: number;
-}
-
-export type { Direction, DirectionDetails, Pair };
-export { Maze, dirMapping, dirArray, DirectionArray };
+export type { Direction, DirectionDetails, Pair, Segment };
+export { Maze, dirMapping, dirArray, DirectionArray, pick };

@@ -1,4 +1,4 @@
-import { dirMapping, Maze, type DirectionDetails, type Pair } from "../Maze";
+import { dirMapping, Maze, pick, type DirectionDetails, type Pair } from "../Maze";
 import MazeGenerator, { type NextWall } from "./MazeGenerator";
 
 class RecursiveBacktrackingGenerator extends MazeGenerator {
@@ -81,7 +81,7 @@ class RecursiveBacktrackingGenerator extends MazeGenerator {
                 best.push(y);
               }
             }
-            const y = this.pick(best);
+            const y = pick(best);
 
             selected = {x, y, dir: 'E'};
             console.log(`RecursiveBacktracking complete - total time: ${Date.now()-this.startTime}ms for ${this.count} walls removed`);
