@@ -1,34 +1,38 @@
 import { useEffect, useRef, useState } from 'react';
 import './App.css'
-import MazeViewer from './MazeViewer';
+import MazeViewer, { type MazeViewerHandle } from './MazeViewer';
 import { Maze, type Direction } from './Maze';
 import type { Algorithm } from './MazeGeneratorWorker';
 
 function App() {
-  const [algorithm, setAlgorithm] = useState<Algorithm>('RecursiveBacktracking');
-  const [width, setWidth] = useState(40);
-  const [height, setHeight] = useState(20);
-  const [delay, setDelay] = useState(0);
+  const [algorithm, setAlgorithm] = useState<Algorithm>(() => localStorage.getItem(`generationAlgorithm`) as Algorithm??'RecursiveBacktracking');
+  const [width, setWidth] = useState(() => parseInt(localStorage.getItem('mazeWidth')??'') || 40);
+  const [height, setHeight] = useState(() => parseInt(localStorage.getItem('mazeHeight')??'') || 20);
+  const [delay, setDelay] = useState(() => localStorage.getItem('delay') ? parseInt(localStorage.getItem('delay')!) : 0);
   const [isPlaying, setIsPlaying] = useState(false);
+  useEffect(() => {
+    localStorage.setItem('mazeWidth', width.toString());
+    localStorage.setItem('mazeHeight', height.toString());
+    localStorage.setItem('generationAlgorithm', algorithm);
+    localStorage.setItem('delay', delay.toString());
+  }, [width, height, algorithm, delay]);
 
+  const mazeViewerRef = useRef<MazeViewerHandle>(null);
   const mazeRef = useRef<Maze>(new Maze(width, height));
-  const workerStartedRef = useRef(false);
   const workerRef = useRef<Worker>(null);
-  const removeWallRef = useRef<(x: number, y: number, dir: Direction) => void>(null);
-  const resetRef = useRef<() => void>(null);
 
   const handlePlayPause = () => {
     if (!isPlaying) {
       if (!workerRef.current) {
         // initialize the worker
-        resetRef.current?.();
+        mazeViewerRef.current?.drawMaze();
         workerRef.current = new Worker(new URL('./MazeGeneratorWorker.ts', import.meta.url), { type: 'module' });
 
+        // handle messages from the worker
         workerRef.current.onmessage = ({data: {method, x, y, dir}}: {data: {method: string, x: number, y: number, dir: Direction}}) => {
           switch (method) {
             case 'removeWall':
-              workerStartedRef.current = true;
-              removeWallRef.current?.(x, y, dir);
+              mazeViewerRef.current?.eraseWall(x, y, dir);
               break;
             case 'done':
               setIsPlaying(false);
@@ -53,7 +57,6 @@ function App() {
       workerRef.current.onmessage = null; // Clean up the message handler
       workerRef.current.terminate(); // Terminate the worker
       workerRef.current = null;
-      workerStartedRef.current = false;
       console.log(`Worker stopped`);
     }
   };
@@ -61,7 +64,7 @@ function App() {
   useEffect(() => {
     // Reset state when algorithm or width/height changes
     setIsPlaying(false);
-    resetRef.current?.();
+    mazeViewerRef.current?.drawMaze();
     // Create a new Maze object with the new dimensions
     mazeRef.current = new Maze(width, height);
     // kill the worker here as well
@@ -120,14 +123,17 @@ function App() {
           {isPlaying ? '⏸️' : '▶️'}
         </button>
       </div>
-      <div style={{flex: '1', minHeight: 0}}>
-        <MazeViewer 
-          width={width}
-          height={height}
-          callback={
-            (reset, removeWall) => {resetRef.current = reset; removeWallRef.current = removeWall;}
-          }
-        />
+      <div style={{padding: '0.5rem', display: 'flex', gap: '1rem'}}>
+        <div style={{flex: '1', minHeight: 0}}>
+          <MazeViewer 
+            ref={mazeViewerRef}
+            width={width}
+            height={height}
+          />
+        </div>
+        <div style={{flex: '0 0 200px'}}>
+          <span>Drawing Instructions</span>
+        </div>
       </div>
     </div>
   );

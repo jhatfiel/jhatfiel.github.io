@@ -1,5 +1,5 @@
-import { dirArray, type Direction } from "../Maze";
-import MazeGenerator from "./MazeGenerator";
+import { dirArray } from "../Maze";
+import MazeGenerator, { type NextWall } from "./MazeGenerator";
 
 // random wall remover to test animation
 // this isn't supposed to generate a legit maze, it's just removing walls until we can't find any more
@@ -7,7 +7,7 @@ class RandomMazeGenerator extends MazeGenerator {
   startTime = Date.now();
   count = 0;
 
-  getNextWallToRemove(): {x: number, y: number, dir: Direction} | undefined {
+  getNextWallToRemove(): NextWall | undefined {
     const maze = this.maze;
     const width = maze.width;
     const height = maze.height;

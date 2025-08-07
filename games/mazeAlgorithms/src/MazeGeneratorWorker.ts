@@ -27,7 +27,7 @@ self.onmessage = function({data: {method, maze, algorithm, delay = 0}}: {data: {
     Object.setPrototypeOf(_maze, Maze.prototype);
   }
 
-  if (algorithm !== undefined) {
+  if (algorithm !== undefined && !mazeGenerator) {
     switch (algorithm) {
       case 'Random':
         mazeGenerator = new RandomMazeGenerator(_maze);
@@ -53,6 +53,8 @@ self.onmessage = function({data: {method, maze, algorithm, delay = 0}}: {data: {
   }
 };
 
+// this is probably going to have to be "getNextOperation" for some more complex algorithms
+// also need to let the main thread know about updated styling - cell finished, partially visited, etc
 function removeNextWall(): {x: number, y: number, dir: Direction} | undefined {
   const result = mazeGenerator?.getNextWallToRemove();
   if (result === undefined) {

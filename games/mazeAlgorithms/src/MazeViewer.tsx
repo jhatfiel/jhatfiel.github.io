@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { forwardRef, useCallback, useImperativeHandle, useRef } from 'react';
 import { dirMapping, type Direction} from './Maze';
 
 const buffer = 10;
@@ -7,15 +7,21 @@ const cellSize = 16;
 interface MazeViewerProps {
   width: number;
   height: number;
-  callback: (
-    reset: () => void,
-    removeWall: (x: number, y: number, dir: Direction) => void,
-  ) => void;
 }
 
-function MazeViewer({width, height, callback}: MazeViewerProps) {
+export type MazeViewerHandle = {
+  drawMaze: () => void,
+  eraseWall: (x: number, y: number, dir: Direction) => void
+}
+
+const MazeViewer = forwardRef<MazeViewerHandle, MazeViewerProps>(({width, height}, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const ctxRef = useRef<CanvasRenderingContext2D>(null);
+
+  useImperativeHandle(ref, () => ({
+    drawMaze: () => drawMaze(),
+    eraseWall: (x, y, dir) => eraseWall(x, y, dir),
+  }))
 
   function drawCell(x: number, y: number) {
     const px = buffer + x*cellSize+1;
@@ -56,16 +62,9 @@ function MazeViewer({width, height, callback}: MazeViewerProps) {
     }
   }, [width, height]);
 
-  useEffect(() => {
-    callback(
-      () => drawMaze(),
-      (x: number, y: number, dir: Direction) => eraseWall(x, y, dir),
-    );
-  }, [callback, drawMaze]);
-
   return <div style={{width: '100%', height: '100%'}}>
       <canvas ref={canvasRef} width={(width)*cellSize + 2*buffer} height={(height)*cellSize + 2*buffer} style={{display: 'block'}}/>
     </div>
-}
+});
 
 export default MazeViewer;
