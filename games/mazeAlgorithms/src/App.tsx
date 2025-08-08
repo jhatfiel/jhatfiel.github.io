@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import './App.css'
 import MazeViewer, { type MazeViewerHandle } from './MazeViewer';
-import { Maze, type Direction, type Segment } from './Maze';
+import Maze, { type Direction, type Segment } from './Maze';
 import type { Algorithm } from './MazeGeneratorWorker';
 import SegmentDrawingPlanner from './SegmentDrawingPlanner';
 

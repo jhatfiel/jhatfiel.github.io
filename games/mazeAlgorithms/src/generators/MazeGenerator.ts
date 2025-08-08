@@ -1,4 +1,4 @@
-import { DirectionArray, type Direction, type Maze } from "../Maze";
+import Maze, { DirectionArray, type Direction } from "../Maze";
 
 type NextWall = {
   x: number;
@@ -16,7 +16,7 @@ abstract class MazeGenerator {
     finished: 'rgb(255, 255, 255)',
   }
   constructor(public maze: Maze) {};
-  abstract getNextWallToRemove(): NextWall | undefined;
+  abstract performNextStep(): boolean;
   randomize<T>(arr: T[]): T[] {
     const sorter = Array.from(arr, (_, index)=>({index, rank: Math.random()}));
     sorter.sort((a,b)=>a.rank-b.rank);
@@ -24,6 +24,10 @@ abstract class MazeGenerator {
   }
   randomizeDirections(): Direction[] {
     return this.randomize(DirectionArray);
+  }
+  removeWall(x: number, y: number, dir: Direction) {
+    self.postMessage({method: 'removeWall', x, y, dir});
+    this.maze.removeWall(x, y, dir);
   }
   colorCell(x: number, y: number, color: string) {
     self.postMessage({method: 'colorCell', x, y, color: color});

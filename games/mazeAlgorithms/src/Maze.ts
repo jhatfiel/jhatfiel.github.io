@@ -79,4 +79,5 @@ const dirMapping = {
 };
 
 export type { Direction, DirectionDetails, Pair, Segment };
-export { Maze, dirMapping, dirArray, DirectionArray, pick };
+export { dirMapping, dirArray, DirectionArray, pick };
+export default Maze;

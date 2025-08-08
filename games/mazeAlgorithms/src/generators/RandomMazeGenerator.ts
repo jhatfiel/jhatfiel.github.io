@@ -1,5 +1,5 @@
 import { dirArray } from "../Maze";
-import MazeGenerator, { type NextWall } from "./MazeGenerator";
+import MazeGenerator from "./MazeGenerator";
 
 // random wall remover to test animation
 // this isn't supposed to generate a legit maze, it's just removing walls until we can't find any more
@@ -7,7 +7,7 @@ class RandomMazeGenerator extends MazeGenerator {
   startTime = Date.now();
   count = 0;
 
-  getNextWallToRemove(): NextWall | undefined {
+  performNextStep(): boolean {
     const maze = this.maze;
     const width = maze.width;
     const height = maze.height;
@@ -37,16 +37,16 @@ class RandomMazeGenerator extends MazeGenerator {
 
     if (tries >= 100) {
       console.log(`Giving up on finding walls to remove - total time: ${Date.now()-this.startTime}ms for ${this.count} walls removed`);
-      return undefined;
+      return false;
     }
 
-    maze.removeWall(x, y, dir.dir);
+    this.removeWall(x, y, dir.dir);
     this.colorCell(x, y, this.COLORS.finished);
     this.colorCell(ox, oy, this.COLORS.finished);
 
     this.count++;
     //console.log(`[${this.count.toString().padStart(4,' ')}] (${Date.now()-now}ms) Removing wall at (${x},${y}) in direction ${dir.dir} / tries=${tries} / walls=${JSON.stringify(cell.walls)}`);
-    return {x, y, dir: dir.dir};
+    return true;
   }
 
 }

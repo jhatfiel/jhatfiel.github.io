@@ -1,7 +1,7 @@
 import type MazeGenerator from "./generators/MazeGenerator";
 import RandomMazeGenerator from "./generators/RandomMazeGenerator";
 import RecursiveBacktrackingGenerator from "./generators/RecursiveBacktrackingGenerator";
-import { type Direction, Maze } from "./Maze";
+import Maze from "./Maze";
 
 type Algorithm = 'Random' | 'RecursiveBacktracking' | 'Wilsons';
 
@@ -53,26 +53,10 @@ self.onmessage = function({data: {method, maze, algorithm, delay = 0}}: {data: {
   }
 };
 
-// this is probably going to have to be "getNextOperation" for some more complex algorithms
-// also need to let the main thread know about updated styling - cell finished, partially visited, etc
-function removeNextWall(): {x: number, y: number, dir: Direction} | undefined {
-  const result = mazeGenerator?.getNextWallToRemove();
-  if (result === undefined) {
-    // no more walls to remove
-    state = 'stopped';
-    self.postMessage({method: 'done'});
-    return undefined;
-  } else {
-    // let the main thread know about the wall removal
-    self.postMessage({...result, method: 'removeWall'});
-    return result;
-  }
-}
-
 async function step() {
   while (state === 'playing') {
     const now = performance.now();
-    const result = removeNextWall();
+    const result = mazeGenerator?.performNextStep();
     if (!result) {
       state = 'stopped';
       self.postMessage({method: 'done'})

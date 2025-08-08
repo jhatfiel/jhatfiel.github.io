@@ -1,4 +1,4 @@
-import { dirMapping, Maze, pick, type DirectionDetails, type Pair } from "../Maze";
+import Maze, { dirMapping, pick, type DirectionDetails, type Pair } from "../Maze";
 import MazeGenerator, { type NextWall } from "./MazeGenerator";
 
 class RecursiveBacktrackingGenerator extends MazeGenerator {
@@ -15,8 +15,8 @@ class RecursiveBacktrackingGenerator extends MazeGenerator {
     );
   }
 
-  getNextWallToRemove(): NextWall | undefined {
-    if (this.complete) return undefined;
+  performNextStep(): boolean {
+    if (this.complete) return false;
 
     let selected: NextWall|undefined = undefined;
 
@@ -99,9 +99,9 @@ class RecursiveBacktrackingGenerator extends MazeGenerator {
     }
 
     if (selected) {
-      this.maze.removeWall(selected.x, selected.y, selected.dir);
+      this.removeWall(selected.x, selected.y, selected.dir);
     }
-    return selected;
+    return selected !== undefined;
   }
 
 }
