@@ -2,8 +2,6 @@ import Maze, { dirMapping, pick, type DirectionDetails, type Pair } from "../Maz
 import MazeGenerator, { type NextWall } from "./MazeGenerator";
 
 class RecursiveBacktrackingGenerator extends MazeGenerator {
-  startTime = Date.now();
-  count = 0;
   parent: {pair: Pair, depth: number}[][];
   currentPos: Pair = { x: 0, y: -1 };
   complete = false;
@@ -16,7 +14,9 @@ class RecursiveBacktrackingGenerator extends MazeGenerator {
   }
 
   performNextStep(): boolean {
-    if (this.complete) return false;
+    if (this.complete) {
+      return false;
+    }
 
     let selected: NextWall|undefined = undefined;
 
@@ -49,7 +49,6 @@ class RecursiveBacktrackingGenerator extends MazeGenerator {
           if (this.parent[y][x].depth !== -1) continue; //{console.log(`Step from ${this.currentPos.x},${this.currentPos.y} to the ${d} would go to visited node`); continue};
 
           //console.log(`We can move to ${x},${y}`);
-          this.count++;
           selected = {...this.currentPos, dir: d};
 
           //  remove the wall in this direction and set our new position
@@ -87,7 +86,6 @@ class RecursiveBacktrackingGenerator extends MazeGenerator {
 
             this.colorCell(x, y, this.COLORS.end);
             selected = {x, y, dir: 'E'};
-            console.log(`RecursiveBacktracking complete - total time: ${Date.now()-this.startTime}ms for ${this.count} walls removed`);
             this.complete = true;
             foundChoice = true;
           } else {
@@ -98,9 +96,7 @@ class RecursiveBacktrackingGenerator extends MazeGenerator {
       } while (!foundChoice);
     }
 
-    if (selected) {
-      this.removeWall(selected.x, selected.y, selected.dir);
-    }
+    if (selected) this.removeWall(selected.x, selected.y, selected.dir);
     return selected !== undefined;
   }
 

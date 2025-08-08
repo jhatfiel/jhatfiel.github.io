@@ -1,6 +1,7 @@
 import type MazeGenerator from "./generators/MazeGenerator";
 import RandomMazeGenerator from "./generators/RandomMazeGenerator";
 import RecursiveBacktrackingGenerator from "./generators/RecursiveBacktrackingGenerator";
+import WilsonsGenerator from "./generators/WilsonsGenerator";
 import Maze from "./Maze";
 
 type Algorithm = 'Random' | 'RecursiveBacktracking' | 'Wilsons';
@@ -35,6 +36,9 @@ self.onmessage = function({data: {method, maze, algorithm, delay = 0}}: {data: {
       case 'RecursiveBacktracking':
         mazeGenerator = new RecursiveBacktrackingGenerator(_maze);
         break;
+      case 'Wilsons':
+        mazeGenerator = new WilsonsGenerator(_maze);
+        break;
       default:
         mazeGenerator = null;
         console.error(`Unknown algorithm: ${algorithm}`);
@@ -58,6 +62,7 @@ async function step() {
     const now = performance.now();
     const result = mazeGenerator?.performNextStep();
     if (!result) {
+      console.log(`${mazeGenerator?.constructor.name} complete - total time: ${Date.now()-(mazeGenerator?.startTime||0)}ms for ${mazeGenerator?.count} walls removed`);
       state = 'stopped';
       self.postMessage({method: 'done'})
       return;

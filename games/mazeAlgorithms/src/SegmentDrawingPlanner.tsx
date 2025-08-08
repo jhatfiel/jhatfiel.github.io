@@ -32,8 +32,7 @@ function SegmentDrawingPlanner({segments, state, setState}: {segments: Segment[]
         return time;
       }
 
-      console.log(`Score of default ordering: ${score({x: 0, y: 0}, segments)}`);
-
+      //console.log(`Score of default ordering: ${score({x: 0, y: 0}, segments)}`);
       const memo = new Map<string, Segment[]|undefined>();
 
       // try all possible arrangments of drawing the segments

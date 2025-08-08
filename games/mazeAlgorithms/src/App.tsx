@@ -136,7 +136,6 @@ function App() {
     <div style={{height:"100%", display: 'flex', flexDirection: 'column'}}>
       <div style={{padding: '0.5rem', display: 'flex', gap: '1rem', alignItems: 'center'}}>
         <select value={algorithm} onChange={e => setAlgorithm(e.target.value as Algorithm)}>
-          <option value="Random">Random</option>
           <option value="RecursiveBacktracking">Recursive Backtracking</option>
           <option value="Wilsons">Wilson's Algorithm</option>
         </select>
