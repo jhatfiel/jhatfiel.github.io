@@ -7,12 +7,13 @@ function Distance(p1: Pair, p2: Pair): number {
 
 const maxSegments = 25;
 
-function SegmentDrawingPlanner({segments}: {segments: Segment[]}) {
+function SegmentDrawingPlanner({segments, state, setState}: {segments: Segment[], state: string, setState: (state: string) => void}) {
   const [optimal, setOptimal] = useState<Segment[]|undefined>(undefined);
   const [waste, setWaste] = useState(0);
   const [maxX, setMaxX] = useState(0);
   
   useEffect(() => {
+    if (state !== 'FINDING') return;
     if (segments.length > 0 && segments.length <= maxSegments) {
       // we want to end in the bottom right, so calculate max x and add {p1: {maxX,0}, p2: {maxX=1,0}} to the segment array
       const maxX = Math.max(...segments.flatMap(seg => ([seg.p1.x, seg.p2.x])));
@@ -66,19 +67,24 @@ function SegmentDrawingPlanner({segments}: {segments: Segment[]}) {
           segmentsToTry = remainingSegments.filter(({seg, index}) => !newDrawn[index] && ((seg.p1.x === pos.x && seg.p1.y === pos.y) || (seg.p2.x === pos.x && seg.p2.y === pos.y)));
         }
 
+        remainingSegments = segments.map((seg, index) => ({seg, index}))
+                                  .filter((s) => !newDrawn[s.index]);
+
         if (segmentsToTry.length === 0) {
           // if there are no segments connected to the current position, 
           // order the segments by distance from the current position
-          segmentsToTry = segments.map((seg, index)=>({seg, index}))
-                      .filter(s => !newDrawn[s.index])
+          segmentsToTry = remainingSegments
                       .map(s => ({...s, distance: Math.min(Distance(s.seg.p1, pos), Distance(s.seg.p2, pos))}))
                       .sort((a, b) => a.distance - b.distance);
-          // we should only select from segments that are ENDS
+          // we should only select from segments that are ENDS?
         }
 
         // order the segments by distance from last drawn segment
         //console.log(`${''.padStart(drawn.filter(v=>v).length, '.')}Current position: (${pos.x}, ${pos.y}) drawn=${drawn}`);
-        if (segmentsToTry.length === 0) return segmentsDrawn; // no segments left to draw
+        if (segmentsToTry.length === 0) {
+          memo.set(key, segmentsDrawn);
+          return segmentsDrawn; // no segments left to draw
+        }
 
         let bestScore = Infinity;
         let bestOrder: Segment[]|undefined = undefined;
@@ -119,16 +125,17 @@ function SegmentDrawingPlanner({segments}: {segments: Segment[]}) {
 
       const now = performance.now();
       const arr = findOptimalDrawingOrder();
-      console.log(`Optimal drawing order found in ${performance.now() - now}ms`);
-      console.log(`Optimal drawing order(s): ${arr?.map(seg => `(${seg.p1.x}, ${seg.p1.y}) to (${seg.p2.x}, ${seg.p2.y})`).join(' / ')}`);
+      //console.log(`Optimal drawing order found in ${performance.now() - now}ms`);
+      //console.log(`Optimal drawing order(s): ${arr?.map(seg => `(${seg.p1.x}, ${seg.p1.y}) to (${seg.p2.x}, ${seg.p2.y})`).join(' / ')}`);
       const optimalScore = score({x: 0, y: 0}, arr);
-      console.log(`Score of optimal ordering: ${score({x: 0, y: 0}, arr)}`);
+      console.log(`Score of optimal ordering (${performance.now()-now}ms): ${score({x: 0, y: 0}, arr)} [memo.size=${memo.size}]`);
       setWaste(optimalScore);
       setOptimal(arr);
+      setState(arr!==undefined && (arr[0].p1.x !== 0 || arr[0].p1.y !== 0) ? 'FOUND':'COMPLETE')
     } else {
       setOptimal(undefined);
     }
-  }, [segments]);
+  }, [segments, state, setState]);
 
   
   if (segments.length === 0) {
