@@ -27,10 +27,19 @@ class WilsonsGenerator extends MazeGenerator {
 
   isContained(pair?: Pair): boolean { return (pair !== undefined) && this.contained[pair.y*this.maze.width + pair.x] === true; }
   setContained(pair: Pair) { this.contained[pair.y*this.maze.width + pair.x] = true; }
+  pruneCurrentWalkTouchedAfter(pair: Pair) {
+    const index = this.currentWalkTouched.findIndex(p => p.x === pair.x && p.y === pair.y);
+    if (index === -1) return;
+    this.currentWalkTouched.splice(index, this.currentWalkTouched.length)
+      .forEach(pos => this.colorCell(pos.x, pos.y, this.COLORS.empty));
+  }
 
   setDirectionForCurrentWalk(pair: Pair, d: Direction) {
     const index = pair.y * this.maze.width + pair.x;
-    if (this.directionForCurrentWalk[index] === undefined) this.currentWalkTouched.push(pair);
+    if (this.directionForCurrentWalk[index] !== undefined) {
+      this.pruneCurrentWalkTouchedAfter(pair);
+    }
+    this.currentWalkTouched.push(pair);
     this.directionForCurrentWalk[index] = d;
   }
 
