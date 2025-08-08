@@ -5,7 +5,7 @@ function Distance(p1: Pair, p2: Pair): number {
   return Math.hypot(p1.x - p2.x, p1.y - p2.y);
 }
 
-const maxSegments = 14;
+const maxSegments = 25;
 
 function SegmentDrawingPlanner({segments}: {segments: Segment[]}) {
   const [optimal, setOptimal] = useState<Segment[]|undefined>(undefined);
@@ -44,42 +44,70 @@ function SegmentDrawingPlanner({segments}: {segments: Segment[]}) {
         const key = `${pos.x},${pos.y},${drawn}`;
         if (memo.has(key)) return memo.get(key);
 
+        const newDrawn = [...drawn];
+        const segmentsDrawn: Segment[] = [];
+
+        let remainingSegments = segments.map((seg, index) => ({seg, index}))
+                                  .filter((s) => !newDrawn[s.index]);
+
+        // if there are segments connected to the current position, try them ONLY
+        let segmentsToTry = remainingSegments.filter(({seg}) => (seg.p1.x === pos.x && seg.p1.y === pos.y) || (seg.p2.x === pos.x && seg.p2.y === pos.y));
+        while (segmentsToTry.length === 1) {
+          const {seg, index} = segmentsToTry[0];
+          newDrawn[index] = true;
+          // move to the other end of the segment
+          if (seg.p1.x === pos.x && seg.p1.y === pos.y) {
+            segmentsDrawn.push(seg);
+            pos = seg.p2;
+          } else {
+            segmentsDrawn.push({p1: seg.p2, p2: seg.p1});
+            pos = seg.p1;
+          }
+          segmentsToTry = remainingSegments.filter(({seg, index}) => !newDrawn[index] && ((seg.p1.x === pos.x && seg.p1.y === pos.y) || (seg.p2.x === pos.x && seg.p2.y === pos.y)));
+        }
+
+        if (segmentsToTry.length === 0) {
+          // if there are no segments connected to the current position, 
+          // order the segments by distance from the current position
+          segmentsToTry = segments.map((seg, index)=>({seg, index}))
+                      .filter(s => !newDrawn[s.index])
+                      .map(s => ({...s, distance: Math.min(Distance(s.seg.p1, pos), Distance(s.seg.p2, pos))}))
+                      .sort((a, b) => a.distance - b.distance);
+          // we should only select from segments that are ENDS
+        }
+
         // order the segments by distance from last drawn segment
         //console.log(`${''.padStart(drawn.filter(v=>v).length, '.')}Current position: (${pos.x}, ${pos.y}) drawn=${drawn}`);
-        const undrawn = segments.map((seg, index)=>({seg, index})).filter(seg => !drawn[seg.index])
-                      .map(seg => ({seg, distance: Math.min(Distance(seg.seg.p1, pos), Distance(seg.seg.p2, pos))}))
-                      .sort((a, b) => a.distance - b.distance)
-                      .map(({seg}) => seg);
-        if (undrawn.length === 0) return []; // no segments left to draw
+        if (segmentsToTry.length === 0) return segmentsDrawn; // no segments left to draw
 
         let bestScore = Infinity;
         let bestOrder: Segment[]|undefined = undefined;
-        for (let i=0; i<undrawn.length; i++) {
-          const {seg, index} = undrawn[i];
+        for (let i=0; i<segmentsToTry.length; i++) {
+          const {seg, index} = segmentsToTry[i];
           // consider both orientations of the segment
-          const newDrawn = [...drawn]; newDrawn[index] = true; // mark this segment as drawn
+          const loopNewDrawn = [...newDrawn]; loopNewDrawn[index] = true; // mark this segment as drawn
           const dp1 = Distance(pos, seg.p1);
           const dp2 = Distance(pos, seg.p2);
           if (dp1 > remainingScore && dp2 > remainingScore) break; // we aren't close enough to either end to make it
 
           // find the best way to draw the remaining segments
-          let newOrder = findOptimalDrawingOrder(seg.p2, newDrawn, bestScore-dp1);
+          let newOrder = findOptimalDrawingOrder(seg.p2, loopNewDrawn, bestScore-dp1);
           if (newOrder) {
             const newScore = dp1 + score(seg.p2, newOrder);
 
             if (newScore < bestScore) {
               bestScore = newScore;
-              bestOrder = [seg, ...newOrder];
+              bestOrder = [...segmentsDrawn, seg, ...newOrder];
             }
           }
 
-          newOrder = findOptimalDrawingOrder(seg.p1, newDrawn, bestScore-dp2);
+          newOrder = findOptimalDrawingOrder(seg.p1, loopNewDrawn, bestScore-dp2);
           if (newOrder) {
             const newScore = dp2 + score(seg.p1, newOrder);
 
             if (newScore < bestScore || (newScore === bestScore && dp2 === 0)) { // we would prefer to have continuous lines
               bestScore = newScore;
-              bestOrder = [{p1: seg.p2, p2: seg.p1}, ...newOrder];
+              bestOrder = [...segmentsDrawn, {p1: seg.p2, p2: seg.p1}, ...newOrder];
             }
           }
         }
