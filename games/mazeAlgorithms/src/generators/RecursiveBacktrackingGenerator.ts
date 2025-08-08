@@ -25,6 +25,7 @@ class RecursiveBacktrackingGenerator extends MazeGenerator {
       selected = {x: 0, y: Math.floor(Math.random()*this.maze.height), dir: 'W'};
       this.currentPos.y = selected.y;
       this.parent[selected.y][selected.x].depth = 0;
+      this.colorCell(0, selected.y, this.COLORS.start);
     } else {
       let foundChoice = false;
 
@@ -58,13 +59,14 @@ class RecursiveBacktrackingGenerator extends MazeGenerator {
           break;
         }
 
-        if (!foundChoice) {
+        if (foundChoice) {
+          this.colorCell(this.currentPos.x, this.currentPos.y, this.COLORS.partial)
+        } else {
           // if we don't have any choices, backtrack to our parent (if we are back at the beginning then we're done)
           const parent = this.parent[this.currentPos.y][this.currentPos.x];
           const x = this.maze.width-1;
 
-          this.currentPos = {...parent.pair};
-          if (this.currentPos.y === -1) {
+          if (parent.pair.y === -1) {
             // we are back at the start, we're done - get an escape in the far right column
             let best: number[] = [];
             let bestDepth = 0;
@@ -83,16 +85,22 @@ class RecursiveBacktrackingGenerator extends MazeGenerator {
             }
             const y = pick(best);
 
+            this.colorCell(x, y, this.COLORS.end);
             selected = {x, y, dir: 'E'};
             console.log(`RecursiveBacktracking complete - total time: ${Date.now()-this.startTime}ms for ${this.count} walls removed`);
             this.complete = true;
             foundChoice = true;
+          } else {
+            this.colorCell(this.currentPos.x, this.currentPos.y, this.COLORS.finished)
           }
+          this.currentPos = {...parent.pair};
         }
       } while (!foundChoice);
     }
 
-    if (selected) this.maze.removeWall(selected.x, selected.y, selected.dir);
+    if (selected) {
+      this.maze.removeWall(selected.x, selected.y, selected.dir);
+    }
     return selected;
   }
 

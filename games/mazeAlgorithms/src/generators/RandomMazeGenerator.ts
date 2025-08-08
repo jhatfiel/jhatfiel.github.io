@@ -41,6 +41,8 @@ class RandomMazeGenerator extends MazeGenerator {
     }
 
     maze.removeWall(x, y, dir.dir);
+    this.colorCell(x, y, this.COLORS.finished);
+    this.colorCell(ox, oy, this.COLORS.finished);
 
     this.count++;
     //console.log(`[${this.count.toString().padStart(4,' ')}] (${Date.now()-now}ms) Removing wall at (${x},${y}) in direction ${dir.dir} / tries=${tries} / walls=${JSON.stringify(cell.walls)}`);

@@ -11,7 +11,7 @@ function App() {
   const [algorithm, setAlgorithm] = useState<Algorithm>(() => localStorage.getItem(`generationAlgorithm`) as Algorithm??'RecursiveBacktracking');
   const [width, setWidth] = useState(() => parseInt(localStorage.getItem('mazeWidth')??'') || 40);
   const [height, setHeight] = useState(() => parseInt(localStorage.getItem('mazeHeight')??'') || 20);
-  const [delay, setDelay] = useState(() => localStorage.getItem('delay') ? parseInt(localStorage.getItem('delay')!) : 0);
+  const [delay, setDelay] = useState(() => localStorage.getItem('delay') ? parseInt(localStorage.getItem('delay')!) : 1);
   const [segments, setSegments] = useState<Segment[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [state, setState] = useState('');
@@ -29,16 +29,22 @@ function App() {
 
   const handleFind = useCallback(() => {
     setState('GENERATING');
+    setDelay(0);
     mazeRef.current = new Maze(width, height);
     // initialize the worker
-    mazeViewerRef.current?.drawMaze();
+    mazeViewerRef.current?.drawMaze('white');
     workerRef.current = new Worker(new URL('./MazeGeneratorWorker.ts', import.meta.url), { type: 'module' });
     // handle messages from the worker
-    workerRef.current.onmessage = ({data: {method, x, y, dir}}: {data: {method: string, x: number, y: number, dir: Direction}}) => {
+    workerRef.current.onmessage = ({data: {method, x, y, dir, color}}: {data: {method: string, x: number, y: number, dir?: Direction, color?: string}}) => {
       switch (method) {
         case 'removeWall':
+          if (!dir) throw new Error(`Direction not specified for removeWall ${x}, ${y}`);
           mazeRef.current.removeWall(x, y, dir);
           mazeViewerRef.current?.eraseWall(x, y, dir);
+          break;
+        case 'colorCell':
+          if (!color) throw new Error(`Color not specified for colorCell ${x}, ${y}`);
+          mazeViewerRef.current?.colorCell(x, y, color);
           break;
         case 'done':
           setIsPlaying(false);
@@ -72,16 +78,22 @@ function App() {
         workerRef.current = new Worker(new URL('./MazeGeneratorWorker.ts', import.meta.url), { type: 'module' });
 
         // handle messages from the worker
-        workerRef.current.onmessage = ({data: {method, x, y, dir}}: {data: {method: string, x: number, y: number, dir: Direction}}) => {
+        workerRef.current.onmessage = ({data: {method, x, y, dir, color}}: {data: {method: string, x: number, y: number, dir?: Direction, color?: string}}) => {
           switch (method) {
             case 'removeWall':
+              if (!dir) throw new Error(`Direction not specified for removeWall ${x}, ${y}`);
               mazeRef.current.removeWall(x, y, dir);
               mazeViewerRef.current?.eraseWall(x, y, dir);
+              break;
+            case 'colorCell':
+              if (!color) throw new Error(`Color not specified for colorCell ${x}, ${y}`);
+              mazeViewerRef.current?.colorCell(x, y, color);
               break;
             case 'done':
               setIsPlaying(false);
               stopWorker();
               setSegments(mazeRef.current.getSegments());
+              setState('FIND');
               break;
           }
         }
@@ -158,14 +170,14 @@ function App() {
             max={500} 
             value={delay} 
             onChange={e => setDelay(parseInt(e.target.value))}
-            style={{width: '8rem', marginLeft: '0.5rem'}}
+            style={{width: '16rem', marginLeft: '0.5rem'}}
           />
           {delay}ms
         </label>
         <button onClick={handlePlayPause}>
           {isPlaying ? '⏸️' : '▶️'}
         </button>
-        <button onClick={handleFind} disabled={state!==''}>
+        <button onClick={handleFind} disabled={state!==''} title="Run continuously until finding a maze that matches a specific characteristic (currently: optimal draw includes a non-draw first move)">
           {state==='' ? 'Find' : state}
         </button>
       </div>

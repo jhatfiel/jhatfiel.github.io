@@ -13,7 +13,7 @@ function SegmentDrawingPlanner({segments, state, setState}: {segments: Segment[]
   const [maxX, setMaxX] = useState(0);
   
   useEffect(() => {
-    if (state !== 'FINDING') return;
+    if (state !== 'FIND' && state !== 'FINDING') return;
     if (segments.length > 0 && segments.length <= maxSegments) {
       // we want to end in the bottom right, so calculate max x and add {p1: {maxX,0}, p2: {maxX=1,0}} to the segment array
       const maxX = Math.max(...segments.flatMap(seg => ([seg.p1.x, seg.p2.x])));
@@ -131,7 +131,7 @@ function SegmentDrawingPlanner({segments, state, setState}: {segments: Segment[]
       console.log(`Score of optimal ordering (${performance.now()-now}ms): ${score({x: 0, y: 0}, arr)} [memo.size=${memo.size}]`);
       setWaste(optimalScore);
       setOptimal(arr);
-      setState(arr!==undefined && (arr[0].p1.x !== 0 || arr[0].p1.y !== 0) ? 'FOUND':'COMPLETE')
+      setState(state==='FIND' || (arr!==undefined && (arr[0].p1.x !== 0 || arr[0].p1.y !== 0)) ? 'FOUND':'COMPLETE')
     } else {
       setOptimal(undefined);
     }
